@@ -25,6 +25,7 @@ from langgraph.types import Command
 from iesolver.config import settings
 from iesolver.graph import build_graph, open_checkpointer
 from iesolver.lm import get_fast_lm, get_reasoning_lm
+from iesolver.report import ReportWriter, write_report
 from iesolver.sandbox.runner import RunResult, run_code
 from iesolver.state import DataBundle, SolverState, empty_state
 
@@ -116,6 +117,7 @@ def is_interrupted(state: SolverState) -> bool:
 
 __all__ = [
     "DataBundle",
+    "ReportWriter",
     "RunResult",
     "SolverState",
     "__version__",
@@ -124,4 +126,5 @@ __all__ = [
     "is_interrupted",
     "run_code",
     "solve",
+    "write_report",
 ]

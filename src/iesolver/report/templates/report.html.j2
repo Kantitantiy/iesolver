@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IE Solver Report</title>
+  <style>
+    :root {
+      --accent: #1d4ed8;
+      --accent-light: #eff6ff;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --green: #166534;
+      --green-bg: #dcfce7;
+      --red: #991b1b;
+      --red-bg: #fee2e2;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* Header */
+    header { background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); color: white; padding: 2rem; border-radius: 10px; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1); }
+    header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
+    .goal-text { font-size: 0.95rem; opacity: 0.9; margin-bottom: 1rem; border-left: 3px solid rgba(255,255,255,.4); padding-left: 0.75rem; }
+    .header-meta { display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; opacity: 0.8; flex-wrap: wrap; }
+    .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-valid   { background: var(--green-bg); color: var(--green); }
+    .badge-invalid { background: var(--red-bg); color: var(--red); }
+    .result-pill { margin-top: 1rem; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 0.5rem 0.85rem; font-family: 'Courier New', monospace; font-size: 0.9rem; }
+    .result-pill strong { display: block; font-size: 0.7rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+
+    /* Sections */
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    section h2 { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent-light); display: flex; align-items: center; gap: 0.5rem; }
+    section h2 .icon { font-size: 1.1rem; }
+
+    /* Markdown-rendered content */
+    .content p  { margin-bottom: 0.75rem; }
+    .content ul, .content ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+    .content li { margin-bottom: 0.25rem; }
+    .content h1, .content h2, .content h3 { font-size: 0.95rem; font-weight: 600; margin: 1rem 0 0.4rem; color: var(--text); }
+    .content strong { font-weight: 600; }
+    .content pre  { background: #f1f5f9; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.82rem; margin: 0.75rem 0; }
+    .content code { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.83rem; font-family: 'Courier New', monospace; }
+    .content pre code { background: none; border: none; padding: 0; }
+    .content blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--muted); margin: 0.75rem 0; }
+
+    /* Metrics table */
+    .metrics-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .metrics-table th { background: #f8fafc; font-weight: 600; text-align: left; padding: 0.4rem 0.75rem; border: 1px solid var(--border); }
+    .metrics-table td { padding: 0.35rem 0.75rem; border: 1px solid var(--border); }
+    .metrics-table tr:nth-child(even) td { background: #fafafa; }
+
+    /* Charts */
+    .chart-img { max-width: 100%; border-radius: 6px; border: 1px solid var(--border); margin: 0.5rem 0; }
+
+    /* Footer */
+    footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 2.5rem; padding: 1rem; border-top: 1px solid var(--border); }
+
+    @media print {
+      body { background: white; }
+      .container { max-width: 100%; padding: 0; }
+      section { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Industrial Engineering Problem Report</h1>
+    <p class="goal-text">{{ goal }}</p>
+    <div class="header-meta">
+      <span>Generated: {{ generated_at }}</span>
+      {% if is_valid is not none %}
+        {% if is_valid %}
+          <span class="badge badge-valid">✓ Solution Validated</span>
+        {% else %}
+          <span class="badge badge-invalid">✗ Validation Failed</span>
+        {% endif %}
+      {% endif %}
+    </div>
+    {% if execution_result %}
+    <div class="result-pill">
+      <strong>Optimal Result</strong>
+      {{ execution_result }}
+    </div>
+    {% endif %}
+  </header>
+
+  <section>
+    <h2><span class="icon">📋</span> Executive Summary</h2>
+    <div class="content">{{ executive_summary }}</div>
+  </section>
+
+  <section>
+    <h2><span class="icon">🔬</span> Technical Analysis</h2>
+    <div class="content">{{ technical_output }}</div>
+  </section>
+
+  {% if has_sensitivity %}
+  <section>
+    <h2><span class="icon">📊</span> Sensitivity Analysis</h2>
+    <div class="content">{{ sensitivity_results }}</div>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2><span class="icon">✅</span> Action Directives</h2>
+    <div class="content">{{ action_directives }}</div>
+  </section>
+
+  {% if figures %}
+  <section>
+    <h2><span class="icon">📈</span> Charts</h2>
+    {% for fig in figures %}
+    <img class="chart-img" src="{{ fig }}" alt="Chart {{ loop.index }}">
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if metrics %}
+  <section>
+    <h2><span class="icon">⚡</span> Performance Metrics</h2>
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th>Node</th>
+          <th>LLM Calls</th>
+          <th>Tokens In</th>
+          <th>Tokens Out</th>
+          <th>Cost (USD)</th>
+          <th>Latency (ms)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for node, m in metrics.items() %}
+        <tr>
+          <td><code>{{ node }}</code></td>
+          <td>{{ m.get("llm_calls", 0) }}</td>
+          <td>{{ m.get("tokens_in", 0) }}</td>
+          <td>{{ m.get("tokens_out", 0) }}</td>
+          <td>${{ "%.4f" | format(m.get("cost_usd", 0) or 0) }}</td>
+          <td>{{ "%.0f" | format(m.get("latency_ms", 0) or 0) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  <footer>
+    Generated by <strong>iesolver</strong> &middot; Powered by DSPy + LangGraph
+  </footer>
+
+</div>
+</body>
+</html>

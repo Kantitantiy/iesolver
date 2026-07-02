@@ -51,7 +51,7 @@ class IESolverSettings(BaseSettings):
     )
     reasoning_model: str = Field(
         default="gemini/gemini-3.1-flash-lite-preview",
-        description="Heavy LM swapped in for Faz 4B code generation.",
+        description="Heavy LM swapped in for Phase 4B code generation.",
     )
 
     # ---- Reproducibility (DESIGN_REVIEW §3.7) --------------------------------
