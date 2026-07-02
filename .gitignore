@@ -1,0 +1,9 @@
+.iesolver/
+.venv/
+__pycache__/
+*.pyc
+.env
+.idea/
+tmp/
+compiled/
+*.docx

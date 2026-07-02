@@ -1,0 +1,69 @@
+# =============================================================================
+# ie-eval — Evaluation harness for iesolver
+# =============================================================================
+# Amaç (EVALUATION_PLAN):
+#   iesolver'ın Q1 makale için gerekli deneylerini (RQ1–RQ5) çalıştıran
+#   bağımsız paket. iesolver'a yalnızca public API üzerinden bağlıdır:
+#       from iesolver import solve, is_interrupted
+#   İç modül import'u (nodes/, signatures/) yasaktır.
+#
+# Faz 4.5 MVP kapsamı:
+#   - Problem / Dataset soyutlamaları
+#   - IE-Case başlangıç seti (2–3 hand-crafted problem)
+#   - Deterministik validator (DESIGN_REVIEW §3.2)
+#   - Batch runner (auto_mode=True)
+#   - SQLite results store
+#
+# İleride (deferred):
+#   - NL4Opt / IndustryOR adaptörleri (dış veri)
+#   - Baselines (single-shot LLM ± CoT)
+#   - Analysis (McNemar, bootstrap CI)
+# =============================================================================
+
+[project]
+name = "ie-eval"
+version = "0.1.0"
+description = "Evaluation harness for iesolver — Q1 paper benchmarks and case studies."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    # iesolver public API'sine bağımlılık — workspace source üzerinden çözülür.
+    "iesolver",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+# -----------------------------------------------------------------------------
+# Build
+# -----------------------------------------------------------------------------
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ie_eval"]
+
+# -----------------------------------------------------------------------------
+# uv — workspace source binding
+# -----------------------------------------------------------------------------
+# iesolver bir PyPI paketi değil, aynı workspace'in başka bir üyesi:
+[tool.uv.sources]
+iesolver = { workspace = true }
+
+# -----------------------------------------------------------------------------
+# pytest
+# -----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ["-v", "--tb=short", "--strict-markers"]
+markers = [
+    "slow: yavaş testler (gerçek LLM çağrısı yapar)",
+    "e2e: uçtan uca smoke testler",
+]

@@ -1,0 +1,200 @@
+# =============================================================================
+# iesolver — pyproject.toml
+# =============================================================================
+# Mimari notlar (Faz 1):
+#   - "Core" minimal tutuldu: DSPy (reasoning units) + LangGraph (workflow engine)
+#     + pandas/openpyxl (DataBundle) + pydantic-settings (config). Bu, plan §5'teki
+#     Faz 1+2 için yeterlidir.
+#   - Faz 4 (viz) ve Faz 5 (report/ui) extras olarak ayrıldı: erken fazlarda
+#     ağır bağımlılıklar (weasyprint, streamlit) yüklenmesin, smoke test'ler
+#     hızlı dönsün.
+#   - Build backend: hatchling (uv ile birinci sınıf uyum, src-layout dostu).
+# =============================================================================
+
+[project]
+name = "iesolver"
+version = "0.1.0"
+description = "End-to-end LLM-driven solver for industrial engineering problems (DSPy + LangGraph)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+keywords = [
+    "industrial-engineering",
+    "operations-research",
+    "llm",
+    "dspy",
+    "langgraph",
+    "agentic-workflow",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+dependencies = [
+    # Reasoning units (DSPy)
+    "dspy>=3.0.0",
+
+    # Workflow engine + persistence
+    "langgraph>=0.2.0",
+    "langgraph-checkpoint-sqlite>=2.0.0",  # SqliteSaver için ayrı paket
+
+    # Data layer (DataBundle)
+    "pandas>=2.1.0",
+    "openpyxl>=3.1.0",                     # xlsx çok-sayfa okuma/yazma
+
+    # Config
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+]
+
+[project.optional-dependencies]
+# Faz 4 — Sensitivity & Artifacts
+viz = [
+    "matplotlib>=3.8.0",
+    "plotly>=5.18.0",
+]
+
+# Faz 5 — 3-formatlı rapor (PDF/DOCX/HTML)
+# NOT: WeasyPrint sistemde Cairo/Pango/GDK-PixBuf bekler.
+# Linux'ta apt; macOS'ta brew; Windows'ta GTK runtime gerekebilir.
+report = [
+    "weasyprint>=60.0",
+    "python-docx>=1.1.0",
+    "jinja2>=3.1.2",
+]
+
+# Faz 5 — Streamlit UI (kütüphane DIŞI; apps/ altında çalışacak)
+ui = [
+    "streamlit>=1.31.0",
+]
+
+# Geliştirme
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.0",
+    "types-openpyxl",
+]
+
+# Hepsi
+all = ["iesolver[viz,report,ui,dev]"]
+
+[project.urls]
+# Homepage    = "https://github.com/<user>/iesolver"
+# Repository  = "https://github.com/<user>/iesolver"
+# Issues      = "https://github.com/<user>/iesolver/issues"
+
+# -----------------------------------------------------------------------------
+# Build
+# -----------------------------------------------------------------------------
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/iesolver"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/iesolver",
+    "README.md",
+    "PLAN.md",
+    "pyproject.toml",
+]
+
+# -----------------------------------------------------------------------------
+# uv workspace — Faz 4.5 (DESIGN_REVIEW §3.2, EVALUATION_PLAN §12)
+# -----------------------------------------------------------------------------
+# "iesolver bir kütüphanedir" tasarım hedefinin ilk gerçek testi:
+# ie-eval ayrı bir paket olarak workspace altında yaşar, iesolver'ı
+# yalnızca public API üzerinden (from iesolver import solve) kullanır.
+# İç modüllere import yasak (kod inceleme kuralı).
+[tool.uv.workspace]
+members = ["ie-eval"]
+
+# -----------------------------------------------------------------------------
+# uv — deterministik dev-deps + opsiyonel kilit
+# -----------------------------------------------------------------------------
+[tool.uv]
+# uv "[project.optional-dependencies].dev" listesini otomatik tanır;
+# burada yalnızca bir not bırakıyoruz. Komut:  uv sync --extra dev
+
+# -----------------------------------------------------------------------------
+# Ruff — lint + format
+# -----------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "SIM", # simplify
+    "C4",  # comprehensions
+    "TCH", # type-checking blocks
+]
+ignore = [
+    "E501",  # line-length: formatter halleder
+    "B008",  # FastAPI/Pydantic default arg desenlerine takılır
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*"   = ["N802", "N803"]   # test fonksiyon adları
+"__init__.py" = ["F401"]         # re-export'lara izin
+
+# -----------------------------------------------------------------------------
+# mypy — strict
+# -----------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+# DSPy + LangGraph runtime metaprogramlama yoğun → modül-bazlı esnetme
+[[tool.mypy.overrides]]
+module = [
+    "dspy.*",
+    "langgraph.*",
+    "weasyprint.*",
+    "plotly.*",
+]
+ignore_missing_imports = true
+
+# -----------------------------------------------------------------------------
+# pytest
+# -----------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: yavaş testler (gerçek LLM çağrısı yapar)",
+    "e2e: uçtan uca smoke testler",
+]
+filterwarnings = [
+    "ignore:The 'prefix' argument:DeprecationWarning",
+]

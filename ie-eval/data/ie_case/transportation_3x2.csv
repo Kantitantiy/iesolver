@@ -1,0 +1,7 @@
+source,destination,cost,supply,demand
+S1,D1,4,40,70
+S1,D2,6,40,80
+S2,D1,5,60,70
+S2,D2,3,60,80
+S3,D1,7,50,70
+S3,D2,2,50,80
