@@ -12,17 +12,18 @@ DSPy modülü neden ChainOfThought?
     KMeans'ın Öklid metriği zorlaması) tespit etmek için akıl
     yürütme şart.
 
-LM seçimi: call_with_reasoning_lm
+LM seçimi: call_with_configured_lm
     CODE path'teki tüm node'lar reasoning LM kullanır (eski kodda
     "Pro modele geçiş" adımı). AlgoSelector yanlış bir seçim yaparsa
     downstream tüm adımlar mahvolur — kaliteli muhakeme kritik.
+    A4 ablasyonunda (fast_only=True) fast LM'e düşer.
 """
 
 from __future__ import annotations
 
 import dspy
 
-from iesolver.lm import call_with_reasoning_lm
+from iesolver.lm import call_with_configured_lm
 from iesolver.signatures import AlgoSelectorSignature
 from iesolver.state import SolverState
 
@@ -41,8 +42,9 @@ def algo_select_node(state: SolverState) -> SolverState:
     target_algorithm, target_library
     Internal: adaptation_notes (passed via state for constraint_adapt)
     """
-    result = call_with_reasoning_lm(
+    result = call_with_configured_lm(
         _selector,
+        fast_only=state.get("fast_only", False),
         essential_prompt=state.get("essential_prompt", "") or "",
         problem_type=state.get("problem_type", "") or "",
         data_summary=state.get("data_summary", "No data provided."),

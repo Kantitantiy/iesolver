@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import dspy
 
-from iesolver.lm import call_with_reasoning_lm
+from iesolver.lm import call_with_configured_lm
 from iesolver.signatures import OutputSpecEngineerSignature
 from iesolver.state import SolverState
 
@@ -33,8 +33,9 @@ def output_spec_node(state: SolverState) -> SolverState:
     ------
     code_output_spec
     """
-    result = call_with_reasoning_lm(
+    result = call_with_configured_lm(
         _spec,
+        fast_only=state.get("fast_only", False),
         essential_prompt=state.get("essential_prompt", "") or "",
         library_specific_constraints=state.get("library_specific_constraints", "") or "",
     )

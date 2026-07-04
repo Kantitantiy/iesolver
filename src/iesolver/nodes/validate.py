@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import dspy
 
-from iesolver.lm import call_with_reasoning_lm
+from iesolver.lm import call_with_configured_lm
 from iesolver.observability.metrics import instrument
 from iesolver.signatures import ResultValidatorSignature
 from iesolver.state import SolverState
@@ -51,8 +51,9 @@ def validate_node(state: SolverState) -> SolverState:
     ------
     is_valid, confidence_score, validation_notes
     """
-    result = call_with_reasoning_lm(
+    result = call_with_configured_lm(
         _validator,
+        fast_only=state.get("fast_only", False),
         essential_prompt=state.get("essential_prompt", "") or "",
         strict_constraints=state.get("strict_constraints", "") or "",
         execution_result=state.get("execution_result", "") or "(no result)",
