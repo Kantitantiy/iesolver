@@ -1,0 +1,24 @@
+Bu proje, DSPy ve LangGraph kullanarak endüstri mühendisliği problemlerini uçtan uca çözen bir Python kütüphanesi geliştirir. Kütüphane adı: iesolver. Akademik makale yayını hedeflenir.
+
+Mimarinin temel ilkeleri:
+- DSPy: reasoning units (Signature + Module), tip-güvenli I/O, ChainOfThought / ReAct / Self-Consistency
+- LangGraph: workflow engine, TypedDict state, conditional edges, döngüler, SqliteSaver checkpointing, human-in-loop via interrupt()
+- Her LangGraph node bir DSPy Module çalıştırır
+- Kütüphane (src/iesolver) + ayrık Streamlit UI (apps/) ayrımı net
+
+Teknik standartlar:
+- Python 3.11+
+- Bağımlılık yönetimi: uv
+- Tip ipuçları zorunlu (mypy uyumlu)
+- Yorum dili: Türkçe (mimari kararlar için) + İngilizce (docstring ve kod yorumları için)
+- Veri girişi: tek dosya (csv / xlsx çok-sayfa / sqlite) → DataBundle soyutlaması
+- Çıktı: PDF + DOCX + HTML; her birinde 3 katman (Teknik / Yönetici / Aksiyon)
+
+Geliştirme tarzı:
+- 5 fazlı plan (bkz. PLAN.md): Foundation → Signature Transfer → Code Branch → New Nodes → Output+UI
+- Her fazın sonunda çalışan smoke test
+- Eski Signature'lar (Project knowledge'taki signatures.py ve phase_*.py dosyalarında) docstring'leriyle birlikte korunur
+- Yorumlarda "Burada ChainOfThought/Predict seçimi gerekçesi: ..." şeklinde makale-niteliğinde notlar tut
+- API kotası: ücretsiz Gemini tier; checkpointing baştan açık olmalı
+
+Her yeni sohbette önce PLAN.md okunur, üretilmiş dosyalar incelenir, sonra geliştirmeye devam edilir.

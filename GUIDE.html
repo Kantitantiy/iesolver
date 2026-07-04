@@ -1,0 +1,1397 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>GUIDE</title>
+<style>
+  body { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem;
+         font-family: -apple-system, Segoe UI, Arial, sans-serif;
+         line-height: 1.55; color: #1e293b; }
+  h1, h2, h3 { color: #1d4ed8; border-bottom: 1px solid #e2e8f0; padding-bottom: .3rem; }
+  h1 { font-size: 1.8rem; } h2 { font-size: 1.4rem; margin-top: 2rem; }
+  h3 { font-size: 1.15rem; border-bottom: none; }
+  code { background: #f1f5f9; padding: .15em .35em; border-radius: 4px;
+          font-size: .9em; }
+  pre { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 6px;
+         overflow-x: auto; }
+  pre code { background: none; padding: 0; color: inherit; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .92em; }
+  th, td { border: 1px solid #cbd5e1; padding: .4rem .6rem; text-align: left; }
+  th { background: #eff6ff; }
+  tr:nth-child(even) { background: #f8fafc; }
+  blockquote { border-left: 4px solid #93c5fd; margin: 1rem 0; padding: .3rem 1rem;
+                color: #475569; background: #f8fafc; }
+  a { color: #1d4ed8; }
+  @media print {
+    body { max-width: 100%; }
+    pre, table { page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<h1>iesolver v4 — Araştırmacı Rehberi</h1>
+<p>Bu rehber; iesolver v4'ü hiç görmemiş bir araştırmacı için yazılmıştır.
+Sistemi nasıl çalıştıracağınızı, LLM konuşmalarını nasıl izleyeceğinizi,
+prompt'ları nasıl geliştireceğinizi ve deney tasarımını nasıl uygulayacağınızı
+adım adım açıklar.</p>
+<hr />
+<h2>İçindekiler</h2>
+<ol>
+<li><a href="#1-v3-ile-v4-fark%C4%B1">v3 ile v4 Farkı</a></li>
+<li><a href="#2-kurulum">Kurulum</a></li>
+<li><a href="#3-bir-problem-tan%C4%B1mlama">Bir Problem Tanımlama</a></li>
+<li><a href="#4-program%C4%B1-ba%C5%9Flatma">Programı Başlatma</a></li>
+<li><a href="#5-a%C5%9Fama-a%C5%9Fama-i%CC%87lerleyi%C5%9Fi-i%CC%87zleme">Aşama Aşama İlerleyişi İzleme</a></li>
+<li><a href="#6-llm-konu%C5%9Fmalar%C4%B1n%C4%B1-g%C3%B6rme">LLM Konuşmalarını Görme</a></li>
+<li><a href="#7-promptlar%C4%B1-nas%C4%B1l-geli%C5%9Ftirilir">Prompt'ları Nasıl Geliştirilir</a></li>
+<li><a href="#8-deney-tasar%C4%B1m%C4%B1">Deney Tasarımı</a></li>
+<li><a href="#9-test-suite">Test Suite</a></li>
+<li><a href="#10-dosya-referans-tablosu">Dosya Referans Tablosu</a></li>
+<li><a href="#11-kodun-makale-uygunlu%C4%9Fu--de%C4%9Ferlendirme">Kodun Makale Uygunluğu — Değerlendirme</a></li>
+<li><a href="#12-program-ak%C4%B1%C5%9F-haritas%C4%B1">Program Akış Haritası</a></li>
+<li><a href="#13-dspy-optimizasyon-mant%C4%B1%C4%9F%C4%B1">DSPy Optimizasyon Mantığı</a></li>
+<li><a href="#14-makale-yol-haritas%C4%B1--kodda-tamamlanacaklar">Makale Yol Haritası — Kodda Tamamlanacaklar</a></li>
+</ol>
+<hr />
+<h2>1. v3 ile v4 Farkı</h2>
+<table>
+<thead>
+<tr>
+<th>Özellik</th>
+<th>v3</th>
+<th>v4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mimari</td>
+<td>Monolitik Python script</td>
+<td>LangGraph DAG + DSPy node'lar</td>
+</tr>
+<tr>
+<td>Çalıştırma</td>
+<td>Tek fonksiyon çağrısı</td>
+<td><code>solve()</code> / <code>stream_solve()</code></td>
+</tr>
+<tr>
+<td>Akış izleme</td>
+<td>Print statement'lar</td>
+<td><code>stream_solve()</code> → node bazlı yield</td>
+</tr>
+<tr>
+<td>LLM geçmişi</td>
+<td>Loglama</td>
+<td><code>show_llm_history()</code> + <code>lm.history</code></td>
+</tr>
+<tr>
+<td>Prompt düzenleme</td>
+<td>Hardcoded f-string'ler</td>
+<td>DSPy Signature'ları (<code>src/iesolver/signatures/</code>)</td>
+</tr>
+<tr>
+<td>Prompt optimizasyonu</td>
+<td>Manuel</td>
+<td>MIPROv2 otomasyonu (<code>scripts/optimize_mipro.py</code>)</td>
+</tr>
+<tr>
+<td>Rapor</td>
+<td>Tek formatlı metin</td>
+<td>HTML + DOCX + PDF (Faz 5)</td>
+</tr>
+<tr>
+<td>Ablasyon testleri</td>
+<td>Yok</td>
+<td>A1-A5 bayrakları + ie-eval paketi</td>
+</tr>
+<tr>
+<td>Veri desteği</td>
+<td>CSV</td>
+<td>CSV / XLSX / SQLite</td>
+</tr>
+<tr>
+<td>Tekrarlanabilirlik</td>
+<td>Yok</td>
+<td><code>temperature=0, seed=42</code> + checkpoint</td>
+</tr>
+</tbody>
+</table>
+<p><strong>v3'teki akışınız v4'te şu şekilde karşılanır:</strong></p>
+<pre><code>v3: problem_tanımla() → çalıştır() → raporu_gör()
+v4: stream_solve(&quot;problem metni&quot;, data_path=&quot;veri.csv&quot;)
+         → her node tamamlandığında (node_adı, partial_state) yield eder
+         → write_report(final_state, &quot;rapor.html&quot;, format=&quot;html&quot;)
+</code></pre>
+<hr />
+<h2>2. Kurulum</h2>
+<pre><code class="language-bash"># Projenin kök dizininde:
+cd &quot;v4/&quot;
+
+# Temel bağımlılıklar + rapor modülü:
+uv sync --extra report
+
+# Tüm eklentilerle (geliştirme ortamı):
+uv sync --all-extras
+
+# API anahtarınızı ayarlayın (.env dosyası veya ortam değişkeni):
+# .env dosyası oluşturun:
+echo IESOLVER_API_KEY=sk-... &gt; .env
+echo IESOLVER_FAST_MODEL=gemini/gemini-2.0-flash &gt;&gt; .env
+echo IESOLVER_REASONING_MODEL=gemini/gemini-2.0-flash &gt;&gt; .env
+</code></pre>
+<p>Desteklenen model formatları (LiteLLM üzerinden):</p>
+<ul>
+<li><code>gemini/gemini-2.0-flash</code></li>
+<li><code>openai/gpt-4o-mini</code></li>
+<li><code>anthropic/claude-3-5-haiku-20241022</code></li>
+</ul>
+<hr />
+<h2>3. Bir Problem Tanımlama</h2>
+<h3>Sadece metin (veri yok)</h3>
+<pre><code class="language-python">problem = &quot;EOQ problemi: Yıllık talep D=10000 birim, sipariş maliyeti S=50 TL, birim tutma maliyeti H=2 TL/yıl. Optimal sipariş miktarını hesapla.&quot;
+</code></pre>
+<h3>Veri dosyasıyla</h3>
+<pre><code class="language-python">problem = &quot;Ekteki CSV'deki lokasyonlar için ulaşım maliyetini minimize eden taşıma planını bul.&quot;
+data    = &quot;data/transport.csv&quot;
+</code></pre>
+<p>Kabul edilen veri formatları:</p>
+<ul>
+<li><code>.csv</code> → tek tablo (<code>tables[&quot;data&quot;]</code>)</li>
+<li><code>.xlsx</code> → her sayfa ayrı tablo (<code>tables[&quot;Sheet1&quot;]</code>, ...)</li>
+<li><code>.sqlite</code> → her tablo ayrı (<code>tables[&quot;orders&quot;]</code>, ...)</li>
+</ul>
+<h3>İyi bir problem metni nasıl olmalı?</h3>
+<p>Sistem G-O-C çerçevesini uygular: <strong>G</strong>oal (Hedef), <strong>O</strong>utput (Çıktı), <strong>C</strong>onstraint (Kısıt).</p>
+<pre><code>İyi: &quot;D=10000, S=50, H=2 parametreleriyle EOQ modelini çöz. Optimal sipariş
+     miktarını ve toplam yıllık maliyeti döndür.&quot;
+
+Zayıf: &quot;Stok optimizasyonu yap.&quot;
+</code></pre>
+<p>Metninizde hedef, beklenen çıktı ve kısıtlar açık değilse, sistem
+<code>clarify</code> node'unda durup ek bilgi ister (interaktif mod) veya
+varsayım yaparak devam eder (auto mod).</p>
+<hr />
+<h2>4. Programı Başlatma</h2>
+<h3>A) Terminal üzerinden (en basit yol)</h3>
+<pre><code class="language-bash"># Temel kullanım:
+uv run python scripts/run_problem.py &quot;EOQ: D=10000, S=50, H=2&quot;
+
+# Veri dosyasıyla:
+uv run python scripts/run_problem.py &quot;LP problemi&quot; --data data/input.csv
+
+# PDF rapor:
+uv run python scripts/run_problem.py &quot;EOQ problemi&quot; --format pdf
+
+# LLM geçmişini de göster:
+uv run python scripts/run_problem.py &quot;EOQ&quot; --show-llm-log
+
+# Interrupt olmadan (batch/test modu):
+uv run python scripts/run_problem.py &quot;EOQ&quot; --auto
+
+# Ablasyon testleri:
+uv run python scripts/run_problem.py &quot;EOQ&quot; --no-refiner   # A1
+uv run python scripts/run_problem.py &quot;EOQ&quot; --no-retry     # A2
+uv run python scripts/run_problem.py &quot;EOQ&quot; --fast-only    # A4
+</code></pre>
+<h3>B) Python'dan (notebook veya script)</h3>
+<pre><code class="language-python">from iesolver import solve, stream_solve, show_llm_history
+from iesolver.report import write_report
+
+# Basit çalıştırma (tüm akış tamamlanınca döner):
+state = solve(&quot;EOQ: D=10000, S=50, H=2&quot;)
+print(state[&quot;executive_summary&quot;])
+print(state[&quot;execution_result&quot;])
+
+# Raporu kaydet:
+write_report(state, &quot;raporum.html&quot;, format=&quot;html&quot;)
+write_report(state, &quot;raporum.pdf&quot;,  format=&quot;pdf&quot;)
+write_report(state, &quot;raporum.docx&quot;, format=&quot;docx&quot;)
+</code></pre>
+<h3>C) Kesintili çalıştırma (checkpoint ile devam)</h3>
+<pre><code class="language-python">import uuid
+thread = str(uuid.uuid4())
+
+# İlk çalıştırma — interrupt olursa durur:
+state = solve(&quot;LP optimizasyon&quot;, thread_id=thread, auto_mode=False)
+
+# Eğer interrupt olduysa, kullanıcı cevabını ekleyip devam edin:
+from langgraph.types import Command
+# (LangGraph interrupt akışı — gelişmiş kullanım)
+</code></pre>
+<hr />
+<h2>5. Aşama Aşama İlerleyişi İzleme</h2>
+<p><code>stream_solve()</code>, her LangGraph node tamamlandığında <code>(node_adı, partial_state)</code> üretir.
+v3'teki adım adım görünümü buradan gelir.</p>
+<h3>Temel kullanım</h3>
+<pre><code class="language-python">from iesolver import stream_solve
+
+for node_name, partial in stream_solve(&quot;EOQ: D=10000, S=50, H=2&quot;):
+    keys = [k for k in partial if not k.startswith(&quot;_&quot;)]
+    print(f&quot;  ✓ {node_name:&lt;25} → {keys}&quot;)
+</code></pre>
+<p><strong>Beklenen çıktı:</strong></p>
+<pre><code>  ✓ intake                   → ['raw_prompt', 'data_bundle', 'data_summary']
+  ✓ requirement              → ['explicit_goal', 'constraints', 'is_complete']
+  ✓ refiner                  → ['refined_prompt']
+  ✓ route                    → ['execution_path']
+  ✓ code_branch              → ['generated_code', 'retry_count']
+  ✓ validate                 → ['is_valid', 'validation_notes']
+  ✓ sensitivity              → ['sensitivity_results']
+  ✓ artifacts                → ['figures']
+  ✓ report                   → ['executive_summary', 'technical_output', 'action_directives']
+</code></pre>
+<h3>Belirli alanları yakalamak</h3>
+<pre><code class="language-python">final_state = {}
+for node_name, partial in stream_solve(&quot;EOQ problemi&quot;):
+    final_state.update(partial)
+    if node_name == &quot;validate&quot;:
+        print(&quot;Doğrulama:&quot;, partial.get(&quot;is_valid&quot;), partial.get(&quot;validation_notes&quot;))
+    if node_name == &quot;report&quot;:
+        print(partial.get(&quot;executive_summary&quot;, &quot;&quot;)[:300])
+</code></pre>
+<h3>Node sırası ve açıklaması</h3>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Ne yapar</th>
+<th>Hangi alanlara yazar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>intake</code></td>
+<td>Ham prompt + veri dosyasını okur, özet çıkarır</td>
+<td><code>data_bundle</code>, <code>data_summary</code></td>
+</tr>
+<tr>
+<td><code>requirement</code></td>
+<td>G-O-C çerçevesiyle gereksinimler çıkarır</td>
+<td><code>explicit_goal</code>, <code>constraints</code>, <code>is_complete</code></td>
+</tr>
+<tr>
+<td><code>clarify</code></td>
+<td>Eksik bilgi varsa interrupt/soru üretir</td>
+<td><code>clarification_questions</code></td>
+</tr>
+<tr>
+<td><code>refiner</code></td>
+<td>Prompt'u yapısal DSPy formatına dönüştürür</td>
+<td><code>refined_prompt</code></td>
+</tr>
+<tr>
+<td><code>route</code></td>
+<td>CODE vs NO_CODE kararı verir</td>
+<td><code>execution_path</code></td>
+</tr>
+<tr>
+<td><code>code_branch</code></td>
+<td>Algoritma seçer, kod üretir (ReAct)</td>
+<td><code>generated_code</code>, <code>algo_name</code></td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td>Kodu çalıştırır, sonucu doğrular</td>
+<td><code>is_valid</code>, <code>execution_result</code></td>
+</tr>
+<tr>
+<td><code>sensitivity</code></td>
+<td>Duyarlılık analizi yapar</td>
+<td><code>sensitivity_results</code></td>
+</tr>
+<tr>
+<td><code>artifacts</code></td>
+<td>Grafik/figür oluşturur</td>
+<td><code>figures</code></td>
+</tr>
+<tr>
+<td><code>chain_branch</code></td>
+<td>NO_CODE yolu: analitik çözüm</td>
+<td><code>technical_output</code></td>
+</tr>
+<tr>
+<td><code>report</code></td>
+<td>3-bölümlü rapor yazar</td>
+<td><code>executive_summary</code>, <code>technical_output</code>, <code>action_directives</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. LLM Konuşmalarını Görme</h2>
+<p>Her LLM çağrısı <code>lm.history</code> listesine eklenir.
+<code>show_llm_history(n)</code> son <code>n</code> çağrıyı ayrıntılı basar.</p>
+<h3>Temel kullanım</h3>
+<pre><code class="language-python">from iesolver import solve, show_llm_history
+
+state = solve(&quot;EOQ: D=10000, S=50, H=2&quot;)
+show_llm_history(n=5)   # Son 5 LLM çağrısını göster
+</code></pre>
+<p><strong>Çıktı formatı:</strong></p>
+<pre><code>──────────────────────────────────────────────────────────────────────
+  [1/5] Model: gemini/gemini-2.0-flash
+  Tokens: 342 giriş / 87 çıkış
+──────────────────────────────────────────────────────────────────────
+
+  ── SYSTEM ──
+  You are a meticulous Industrial Engineering Requirement Analyst...
+
+  ── USER ──
+  Cleaned prompt: EOQ: D=10000, S=50, H=2...
+  Data summary: (veri yok)
+
+  ── ASSISTANT ──
+  {&quot;is_complete&quot;: true, &quot;explicit_goal&quot;: &quot;Minimize total inventory cost...&quot;}
+</code></pre>
+<h3>Terminal üzerinden (run_problem.py ile)</h3>
+<pre><code class="language-bash">uv run python scripts/run_problem.py &quot;EOQ&quot; --show-llm-log --llm-log-n 10
+</code></pre>
+<h3>Doğrudan history'ye erişim</h3>
+<pre><code class="language-python">from iesolver.lm import get_fast_lm, get_reasoning_lm
+
+fast_lm      = get_fast_lm()
+reasoning_lm = get_reasoning_lm()
+
+# Her entry: {&quot;model&quot;: &quot;...&quot;, &quot;messages&quot;: [...], &quot;response&quot;: {...}, &quot;usage&quot;: {...}}
+for entry in fast_lm.history[-3:]:
+    print(entry[&quot;model&quot;], entry.get(&quot;usage&quot;, {}))
+</code></pre>
+<hr />
+<h2>7. Prompt'ları Nasıl Geliştirilir</h2>
+<h3>Hangi dosyayı düzenlemeliyim?</h3>
+<p>Tüm LLM talimatları <code>src/iesolver/signatures/</code> klasöründedir.
+Her <code>.py</code> dosyası bir DSPy <code>Signature</code> sınıfı içerir.</p>
+<table>
+<thead>
+<tr>
+<th>Signature dosyası</th>
+<th>Hangi node kullanır</th>
+<th>Ne kontrol eder</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gatekeeper.py</code></td>
+<td><code>intake</code></td>
+<td>Ham prompt temizleme, veri özetleme</td>
+</tr>
+<tr>
+<td><code>requirement_analyst.py</code></td>
+<td><code>requirement</code></td>
+<td>G-O-C çerçevesi, eksik bilgi tespiti</td>
+</tr>
+<tr>
+<td><code>prompt_refiner.py</code></td>
+<td><code>refiner</code></td>
+<td>Yapısal prompt dönüştürme</td>
+</tr>
+<tr>
+<td><code>strategy_router.py</code></td>
+<td><code>route</code></td>
+<td>CODE/NO_CODE kararı mantığı</td>
+</tr>
+<tr>
+<td><code>algo_selector.py</code></td>
+<td><code>code_branch/algo_select</code></td>
+<td>Algoritma seçim kriterleri</td>
+</tr>
+<tr>
+<td><code>constraint_adapter.py</code></td>
+<td><code>code_branch/constraint_adapt</code></td>
+<td>Kısıt tanımlama</td>
+</tr>
+<tr>
+<td><code>output_spec.py</code></td>
+<td><code>code_branch/output_spec</code></td>
+<td>Beklenen çıktı formatı</td>
+</tr>
+<tr>
+<td><code>react_code.py</code></td>
+<td><code>code_branch/generate</code></td>
+<td>Kod üretimi (ReAct döngüsü)</td>
+</tr>
+<tr>
+<td><code>validator.py</code></td>
+<td><code>validate</code></td>
+<td>Doğrulama kriterleri</td>
+</tr>
+<tr>
+<td><code>sensitivity.py</code></td>
+<td><code>sensitivity</code></td>
+<td>Duyarlılık analizi yönergesi</td>
+</tr>
+<tr>
+<td><code>final_report.py</code></td>
+<td><code>report</code></td>
+<td>Rapor formatı ve tonu</td>
+</tr>
+<tr>
+<td><code>analytical_engine.py</code></td>
+<td><code>chain_branch</code></td>
+<td>NO_CODE analitik çözüm</td>
+</tr>
+</tbody>
+</table>
+<h3>Signature nasıl düzenlenir?</h3>
+<pre><code class="language-python"># src/iesolver/signatures/requirement_analyst.py
+
+class RequirementAnalystSignature(dspy.Signature):
+    &quot;&quot;&quot;
+    [BURASI SYSTEM PROMPT — LLM'e ne yapması gerektiği]
+    DSPy bu docstring'i system prompt olarak gönderir.
+    &quot;&quot;&quot;
+    # InputField'lar: node'dan gelen veriler
+    cleaned_prompt: str = dspy.InputField(desc=&quot;...&quot;)
+    data_summary:   str = dspy.InputField(desc=&quot;...&quot;)
+
+    # OutputField'lar: LLM'in döndürmesi beklenenler
+    is_complete:    bool       = dspy.OutputField(desc=&quot;...&quot;)
+    explicit_goal:  str        = dspy.OutputField(desc=&quot;...&quot;)
+    constraints:    list[str]  = dspy.OutputField(desc=&quot;...&quot;)
+</code></pre>
+<p><strong>Düzenleme noktaları:</strong></p>
+<ol>
+<li><code>&quot;&quot;&quot;...&quot;&quot;&quot;</code> docstring → sistem direktifi (en etkili)</li>
+<li><code>InputField(desc=&quot;...&quot;)</code> → LLM'e alan açıklaması</li>
+<li><code>OutputField(desc=&quot;...&quot;)</code> → beklenen format açıklaması</li>
+</ol>
+<h3>Değişikliği test etme</h3>
+<pre><code class="language-bash"># Signature'ı düzenledikten sonra:
+uv run python scripts/run_problem.py &quot;EOQ: D=10000, S=50, H=2&quot; --show-llm-log
+</code></pre>
+<p>Çıktıda değişen system prompt'u ve LLM'in yeni yanıtını görürsünüz.</p>
+<h3>Otomatik Prompt Optimizasyonu (MIPROv2)</h3>
+<p>DSPy'ın MIPROv2 algoritması, Signature prompt'larını otomatik olarak optimize edebilir:</p>
+<pre><code class="language-bash"># Pilot koşu (düşük maliyet):
+uv run python scripts/optimize_mipro.py \
+    --train-data data/nl4opt_train_cleaned.jsonl \
+    --output compiled/iesolver_mipro.json \
+    --max-train 40 --num-candidates 5 --num-trials 10
+
+# Kurulum doğrulama (LLM çağrısı yok):
+uv run python scripts/optimize_mipro.py \
+    --train-data data/nl4opt_train_cleaned.jsonl \
+    --output compiled/test.json --dry-run
+</code></pre>
+<p>Optimize edilmiş program JSON olarak kaydedilir ve
+<code>iesolver._optimization.load_compiled_graph(path)</code> veya
+<code>ie_eval.ablations.make_a5_solve(compiled_path=path)</code> ile yüklenir.
+Ayrıntılı mantık için bkz. <a href="#13-dspy-optimizasyon-mant%C4%B1%C4%9F%C4%B1">§13 DSPy Optimizasyon Mantığı</a>.
+Bu, makalenin ana araştırma katkısıdır (A5 ablasyonu).</p>
+<hr />
+<h2>8. Deney Tasarımı</h2>
+<h3>Ablasyon Bayrakları (EVALUATION_PLAN §5)</h3>
+<table>
+<thead>
+<tr>
+<th>Ablasyon</th>
+<th>Bayrak / Mekanizma</th>
+<th>Terminal</th>
+<th>Neyi ölçer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A1</td>
+<td><code>solve(&quot;...&quot;, enable_refiner=False)</code></td>
+<td><code>--no-refiner</code></td>
+<td>PromptRefiner katkısı</td>
+</tr>
+<tr>
+<td>A2</td>
+<td><code>solve(&quot;...&quot;, enable_validator_retry=False)</code></td>
+<td><code>--no-retry</code></td>
+<td>Retry döngüsü katkısı</td>
+</tr>
+<tr>
+<td>A3</td>
+<td><code>ie_eval.ablations.make_a3_correctness_fn()</code> — deterministik doğrulama kapatılır, yalnız LLM validator sinyali kullanılır</td>
+<td>— (ie-eval)</td>
+<td>Deterministik doğrulama katmanı katkısı</td>
+</tr>
+<tr>
+<td>A4</td>
+<td><code>solve(&quot;...&quot;, fast_only=True)</code></td>
+<td><code>--fast-only</code></td>
+<td>Reasoning LM anahtarlaması katkısı</td>
+</tr>
+<tr>
+<td>A5</td>
+<td><code>ie_eval.ablations.make_a5_solve(compiled_path)</code> — MIPROv2 optimize Signature'lar</td>
+<td>— (ie-eval)</td>
+<td>MIPROv2 optimizasyonunun katkısı</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Otoritatif tanımlar: <code>ie-eval/src/ie_eval/ablations.py</code> (EVALUATION_PLAN §5 ile hizalı).</p>
+</blockquote>
+<h3>Toplu Değerlendirme (ie-eval paketi)</h3>
+<pre><code class="language-bash">cd ie-eval/
+uv run python -m ieeval.runner \
+    --dataset datasets/nl4opt_sample.jsonl \
+    --config configs/full.yaml \
+    --out results/
+
+# Sadece ablasyon A1 (refiner yok):
+uv run python -m ieeval.runner --config configs/ablation_a1.yaml
+</code></pre>
+<h3>Metrikler</h3>
+<p>Sistem her node için otomatik olarak toplar:</p>
+<pre><code class="language-python">state = solve(&quot;EOQ problemi&quot;)
+print(state[&quot;metrics&quot;])
+# {
+#   &quot;intake&quot;:   {&quot;llm_calls&quot;: 1, &quot;tokens_in&quot;: 342, &quot;tokens_out&quot;: 87,
+#                &quot;cost_usd&quot;: 0.0001, &quot;latency_ms&quot;: 450},
+#   &quot;report&quot;:   {&quot;llm_calls&quot;: 1, &quot;tokens_in&quot;: 800, &quot;tokens_out&quot;: 250, ...},
+#   ...
+# }
+</code></pre>
+<p>Raporlarda &quot;Performance Metrics&quot; tablosu olarak otomatik eklenir.</p>
+<h3>Tekrarlanabilirlik</h3>
+<p>Tüm çalıştırmalar <code>temperature=0, seed=42</code> ile yapılır (<code>.env</code> ile değiştirilebilir).
+LangGraph checkpoint SQLite'a kaydedilir (<code>checkpoints/solver.db</code>).
+Aynı <code>thread_id</code> ile çağrı yapılırsa önceki durum yüklenir.</p>
+<pre><code class="language-python"># Aynı thread_id ile ikinci çalıştırma → checkpoint'ten devam
+state2 = solve(&quot;EOQ&quot;, thread_id=&quot;benim-thread-123&quot;)
+</code></pre>
+<hr />
+<h2>9. Test Suite</h2>
+<pre><code class="language-bash"># Tüm testler:
+uv run pytest
+
+# Sadece rapor testleri:
+uv run pytest tests/test_report_writer.py -v
+
+# Sadece Faz 4 (duyarlılık):
+uv run pytest tests/test_faz4.py -v
+
+# Yavaş testler hariç (LLM çağrısı yapmaz):
+uv run pytest -m &quot;not slow&quot;
+
+# ie-eval testleri:
+cd ie-eval/ &amp;&amp; uv run pytest
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Test dosyası</th>
+<th>Ne test eder</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_report_writer.py</code></td>
+<td>HTML/DOCX/PDF üretimi (15 test)</td>
+</tr>
+<tr>
+<td><code>test_faz4.py</code></td>
+<td>Duyarlılık analizi, artifact üretimi</td>
+</tr>
+<tr>
+<td><code>test_typed_signatures.py</code></td>
+<td>DSPy Signature tip kontrolü</td>
+</tr>
+<tr>
+<td><code>test_metrics.py</code></td>
+<td>Node metrik toplama</td>
+</tr>
+<tr>
+<td><code>test_auto_mode.py</code></td>
+<td>Auto mode / interrupt davranışı</td>
+</tr>
+<tr>
+<td><code>test_reproducibility.py</code></td>
+<td>Seed/determinizm</td>
+</tr>
+<tr>
+<td><code>test_e2e_eoq.py</code></td>
+<td>Uçtan uca EOQ smoke testi (gerçek LLM)</td>
+</tr>
+</tbody>
+</table>
+<p>Test sırasında üretilen dosyalar (PDF, DOCX, HTML) şuraya kaydedilir:
+<code>C:\Users\&lt;kullanıcı&gt;\AppData\Local\Temp\pytest-of-&lt;kullanıcı&gt;\pytest-NN\</code></p>
+<hr />
+<h2>10. Dosya Referans Tablosu</h2>
+<h3>Giriş Noktaları</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Amaç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/iesolver/__init__.py</code></td>
+<td>Public API: <code>solve()</code>, <code>stream_solve()</code>, <code>show_llm_history()</code>, <code>write_report()</code></td>
+</tr>
+<tr>
+<td><code>scripts/run_problem.py</code></td>
+<td>Terminal CLI: problem ver → aşama aşama izle → rapor al</td>
+</tr>
+<tr>
+<td><code>scripts/optimize_mipro.py</code></td>
+<td>MIPROv2 ile DSPy Signature'larını otomatik optimize et</td>
+</tr>
+</tbody>
+</table>
+<h3>Çekirdek Modüller</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Amaç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/iesolver/config.py</code></td>
+<td><code>Settings</code> sınıfı: API key, model isimleri, dizin yolları (<code>.env</code>'den)</td>
+</tr>
+<tr>
+<td><code>src/iesolver/state.py</code></td>
+<td><code>SolverState</code> (TypedDict) + <code>DataBundle</code> — pipeline'daki ortak veri</td>
+</tr>
+<tr>
+<td><code>src/iesolver/graph.py</code></td>
+<td>LangGraph DAG tanımı: node'lar, edge'ler, conditional routing</td>
+</tr>
+<tr>
+<td><code>src/iesolver/lm.py</code></td>
+<td>LM yönetimi: <code>call_with_fast_lm()</code>, <code>call_with_reasoning_lm()</code>, <code>call_with_configured_lm()</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Node'lar (İş Mantığı)</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Node</th>
+<th>Görev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/iesolver/nodes/intake.py</code></td>
+<td><code>intake</code></td>
+<td>Ham prompt temizleme + veri yükleme</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/requirement.py</code></td>
+<td><code>requirement</code></td>
+<td>G-O-C gereksinim çıkarımı</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/clarify.py</code></td>
+<td><code>clarify</code></td>
+<td>Eksik bilgi → interrupt veya varsayım</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/refine.py</code></td>
+<td><code>refiner</code></td>
+<td>Prompt → yapısal DSPy formatı</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/route.py</code></td>
+<td><code>route</code></td>
+<td>CODE / NO_CODE karar</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/code_branch/algo_select.py</code></td>
+<td><code>code_branch</code> (1/4)</td>
+<td>Algoritma seçimi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/code_branch/constraint_adapt.py</code></td>
+<td><code>code_branch</code> (2/4)</td>
+<td>Kısıt adaptasyonu</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/code_branch/output_spec.py</code></td>
+<td><code>code_branch</code> (3/4)</td>
+<td>Çıktı tanımı</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/code_branch/generate.py</code></td>
+<td><code>code_branch</code> (4/4)</td>
+<td>ReAct kod üretimi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/validate.py</code></td>
+<td><code>validate</code></td>
+<td>Sandbox çalıştırma + doğrulama</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/chain_branch.py</code></td>
+<td><code>chain_branch</code></td>
+<td>NO_CODE analitik çözüm</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/sensitivity.py</code></td>
+<td><code>sensitivity</code></td>
+<td>Duyarlılık analizi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/artifacts.py</code></td>
+<td><code>artifacts</code></td>
+<td>Grafik/figür üretimi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/nodes/report.py</code></td>
+<td><code>report</code></td>
+<td>3-bölümlü rapor metni</td>
+</tr>
+</tbody>
+</table>
+<h3>DSPy Signature'ları (Prompt Mühendisliği)</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Kontrol ettiği prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/iesolver/signatures/gatekeeper.py</code></td>
+<td>Girdi temizleme direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/requirement_analyst.py</code></td>
+<td>G-O-C çerçevesi + tamamlık değerlendirmesi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/prompt_refiner.py</code></td>
+<td>Yapısal dönüştürme direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/strategy_router.py</code></td>
+<td>CODE/NO_CODE karar mantığı</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/algo_selector.py</code></td>
+<td>Algoritma seçim kriterleri</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/constraint_adapter.py</code></td>
+<td>Kısıt formülasyon direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/output_spec.py</code></td>
+<td>Çıktı format direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/react_code.py</code></td>
+<td>ReAct döngüsü kod üretim direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/validator.py</code></td>
+<td>Doğrulama kriterlerini direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/sensitivity.py</code></td>
+<td>Duyarlılık analizi direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/tornado_chart.py</code></td>
+<td>Tornado chart veri direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/analytical_engine.py</code></td>
+<td>NO_CODE analitik çözüm direktifi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/signatures/final_report.py</code></td>
+<td>Rapor bölümü yazım direktifi</td>
+</tr>
+</tbody>
+</table>
+<h3>Rapor Modülü</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Amaç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/iesolver/report/__init__.py</code></td>
+<td><code>ReportWriter</code>, <code>write_report</code> export</td>
+</tr>
+<tr>
+<td><code>src/iesolver/report/writer.py</code></td>
+<td><code>ReportWriter</code> sınıfı — format yönlendirmesi</td>
+</tr>
+<tr>
+<td><code>src/iesolver/report/_html.py</code></td>
+<td>Jinja2 + markdown-it-py → HTML renderer</td>
+</tr>
+<tr>
+<td><code>src/iesolver/report/_docx.py</code></td>
+<td>python-docx → DOCX renderer</td>
+</tr>
+<tr>
+<td><code>src/iesolver/report/_pdf.py</code></td>
+<td>fpdf2 → PDF renderer (saf Python, GTK gerekmez)</td>
+</tr>
+<tr>
+<td><code>src/iesolver/report/templates/report.html.j2</code></td>
+<td>HTML rapor Jinja2 şablonu</td>
+</tr>
+</tbody>
+</table>
+<h3>Altyapı</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Amaç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/iesolver/io/data_loader.py</code></td>
+<td>CSV/XLSX/SQLite → <code>DataBundle</code> dönüşümü</td>
+</tr>
+<tr>
+<td><code>src/iesolver/sandbox/runner.py</code></td>
+<td>Üretilen Python kodunu izole sandbox'ta çalıştırır</td>
+</tr>
+<tr>
+<td><code>src/iesolver/observability/metrics.py</code></td>
+<td>Node başına LLM çağrı sayısı, token, maliyet, gecikme</td>
+</tr>
+<tr>
+<td><code>src/iesolver/_optimization.py</code></td>
+<td>Optimize edilmiş DSPy programını yükleme/kaydetme</td>
+</tr>
+</tbody>
+</table>
+<h3>Değerlendirme (ie-eval paketi)</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Amaç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ie-eval/</code></td>
+<td>Ayrı uv workspace paketi — benchmark runner</td>
+</tr>
+<tr>
+<td><code>ie-eval/ieeval/runner.py</code></td>
+<td>NL4Opt / IndustryOR dataset'leri üzerinde toplu değerlendirme</td>
+</tr>
+</tbody>
+</table>
+<h3>Konfigürasyon</h3>
+<table>
+<thead>
+<tr>
+<th>Dosya</th>
+<th>Amaç</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>.env</code></td>
+<td><code>IESOLVER_API_KEY</code>, <code>IESOLVER_FAST_MODEL</code>, <code>IESOLVER_REASONING_MODEL</code></td>
+</tr>
+<tr>
+<td><code>pyproject.toml</code></td>
+<td>Proje bağımlılıkları, ruff, mypy, pytest ayarları</td>
+</tr>
+<tr>
+<td><code>PLAN.md</code></td>
+<td>5 fazlı yol haritası ve teknik kararlar</td>
+</tr>
+<tr>
+<td><code>METHODOLOGY_NOTES.md</code></td>
+<td>Makale için mimari kararlar ve gerekçeler</td>
+</tr>
+<tr>
+<td><code>SYSTEM.md</code></td>
+<td>Sistem mimarisinin tam AI-odaklı dokümantasyonu</td>
+</tr>
+<tr>
+<td><code>EVALUATION_PLAN.MD</code></td>
+<td>Deney tasarımı, metrikler, ablasyon planı</td>
+</tr>
+<tr>
+<td><code>MAKALE_YOL_HARITASI.md</code></td>
+<td>Kod sonrası → Q1 yayın iş listesi (18 iş)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>11. Kodun Makale Uygunluğu — Değerlendirme</h2>
+<p><em>Son değerlendirme: 2026-07-04. Hızlı test suite: 54/54 geçti (<code>pytest -m &quot;not slow&quot;</code>).</em></p>
+<h3>Genel Yargı</h3>
+<p>Kod, makalenin metodoloji bölümünü taşıyacak olgunlukta. Mimari iddiaların
+(state-as-contract, bounded retry, ikili doğrulama, model tier anahtarlaması,
+MIPROv2 optimizasyonu) hepsinin kodda somut karşılığı var ve test ediliyor.
+Değerlendirmede bulunan tek gerçek tutarsızlık (Bulgu 1, A4 bayrağı) aynı
+gün düzeltildi; geri kalanlar bilgi notu düzeyinde.</p>
+<h3>Güçlü Yanlar (makale argümanlarını destekleyen)</h3>
+<ul>
+<li><strong>Tip-güvenli state sözleşmesi</strong> — <code>SolverState</code> TypedDict, her node yalnız
+yazdığı alanı döner; LangGraph partial-merge. Makaledeki &quot;state-as-contract&quot;
+argümanının birebir karşılığı (<code>state.py</code>).</li>
+<li><strong>İki katmanlı hata kurtarma</strong> — iç katman: ReAct <code>max_iters=3</code> (kod yaz →
+çalıştır → hatayı gör → düzelt); dış katman: validate → code_branch retry
+döngüsü (<code>MAX_RETRIES=3</code>). &quot;Autonomous Error Recovery with Bounded Retries.&quot;</li>
+<li><strong>Tekrarlanabilirlik</strong> — <code>temperature=0, seed=42</code> her LM örneğine uygulanıyor;
+SQLite checkpoint; <code>test_reproducibility.py</code> bunu doğruluyor.</li>
+<li><strong>Telemetri</strong> — her node'da <code>@instrument</code> ile token/maliyet/gecikme toplama;
+<code>merge_metrics</code> reducer retry geçişlerini <code>invocations</code> ile sayıyor. Makalenin
+maliyet-doğruluk analizinin ham verisi buradan geliyor.</li>
+<li><strong>Ablasyon altyapısı</strong> — A1/A2/A4 bayrak olarak state'te, A3/A5 ie-eval
+tarafında; kod kopyalamadan config ile koşulabiliyor (yol haritası İş 8'in şartı).</li>
+<li><strong>MIPROv2 entegrasyonu</strong> — singleton paylaşımı tasarımı (<code>_optimization.py</code>)
+doğru kurgulanmış; save/load JSON ile &quot;ham vs optimize&quot; iki konfigürasyon
+temiz şekilde ayrılıyor.</li>
+</ul>
+<h3>Bulgular</h3>
+<p><strong>Bulgu 1 (✅ düzeltildi, 2026-07-04):</strong> <code>fast_only=True</code> bayrağını (A4)
+yalnızca <code>generate.py</code> ve <code>sensitivity.py</code> dikkate alıyordu; şu dört node
+bayrağı yok sayıp doğrudan <code>call_with_reasoning_lm</code> çağırıyordu:
+<code>algo_select.py</code>, <code>constraint_adapt.py</code>, <code>output_spec.py</code>, <code>validate.py</code>.
+Yani A4 koşusunda reasoning LM &quot;kapalı&quot; sanılırken 6 çağrının 4'ü hâlâ
+reasoning modeli kullanırdı — ablasyon geçersiz sonuç üretirdi. Dört çağrı da
+<code>call_with_configured_lm(_module, fast_only=state.get(&quot;fast_only&quot;, False), ...)</code>
+biçimine çevrildi; artık reasoning-tier'daki 6 çağrının tamamı bayrağa uyuyor.
+Doğrulama: v4 54/54 + ie-eval 144/144 test geçti.</p>
+<p><strong>Bulgu 2 (karar noktası — İş 6):</strong> <code>MAKALE_YOL_HARITASI.md</code> İş 6, maliyet
+gerekçesiyle yalnızca 2 kritik Signature'ın (AlgoSelector + ReAct) optimize
+edilmesini öneriyor; mevcut <code>IESolverProgram</code> ise 11 modülün hepsini
+optimizasyona açıyor. İkisi de savunulabilir; nasıl kısıtlanacağı §13.6'da.</p>
+<p><strong>Bulgu 3 (bilgi):</strong> <code>ie-eval/datasets/</code> ve <code>compiled/</code> henüz boş — bu hata
+değil, yol haritası İş 3, 4 ve 6'nın çıktıları. Adaptör kodları
+(<code>nl4opt.py</code>, <code>industryor.py</code>, <code>ie_case.py</code>) hazır ve test edilmiş.</p>
+<p><strong>Bulgu 4 (giderildi):</strong> Bu rehberin §7 ve §8'indeki eski MIPROv2 komutu ve
+A3/A5 tanımları kodla çelişiyordu; bu güncellemede <code>optimize_mipro.py</code> ve
+<code>ablations.py</code> ile hizalandı.</p>
+<hr />
+<h2>12. Program Akış Haritası</h2>
+<h3>Kuşbakışı: bir problemin yaşam döngüsü</h3>
+<p><code>solve(&quot;EOQ: D=10000, S=50, H=2&quot;)</code> çağrıldığında olan biten, tek cümleyle:
+<strong>ham metin → temizle → gereksinimleri çıkar → (eksikse sor) → prompt'u
+rafine et → çözüm yolunu seç → kodu üret ve çalıştır → doğrula (gerekirse
+tekrar dene) → duyarlılık analizi → grafikler → 3 katmanlı rapor.</strong></p>
+<pre><code>START
+  │
+  ▼
+intake ─────────── GateKeeper: prompt temizle + veri dosyasını DataBundle'a yükle, özetle
+  │
+  ▼
+requirement ────── G-O-C çerçevesi: hedef/çıktı/kısıt çıkar, is_complete kararı
+  │
+  ├─[eksik bilgi]──▶ clarify ── interaktif: kullanıcıya sor (interrupt) → requirement'a dön
+  │                     └────── auto_mode: varsayım yap, logla → refine'a devam
+  │
+  ▼ [tam]
+refine ─────────── PromptRefiner: yapısal prompt (essential_prompt, strict_constraints)
+  │                (A1 ablasyonunda bu node atlanır)
+  ▼
+route ──────────── StrategyRouter: CODE mu NO_CODE mu?
+  │
+  ├─[NO_CODE]──▶ chain_branch ── analitik/kavramsal çözüm ──────────────┐
+  │                                                                      │
+  ▼ [CODE]                                                               │
+code_branch ────── 4 alt adım tek node içinde:                           │
+  │                 1. algo_select      → algoritma + kütüphane seç      │
+  │                 2. constraint_adapt → kısıtları kütüphaneye çevir    │
+  │                 3. output_spec      → beklenen çıktı formatı         │
+  │                 4. generate (ReAct) → kod yaz ⇄ sandbox'ta çalıştır  │
+  │                    (iç döngü: max 3 iterasyon kendi kendini düzelt)  │
+  ▼                                                                      │
+validate ───────── LLM ile semantik doğrulama (negatif stok? olasılık&gt;1?)│
+  │                                                                      │
+  ├─[geçersiz + retry hakkı var]──▶ code_branch'e geri dön               │
+  │                                 (dış döngü: toplam max 3 geçiş)      │
+  ├─[geçersiz + hak bitti]──────────────────────────────▶ report         │
+  ▼ [geçerli]                                                ▲           │
+sensitivity ────── parametre duyarlılık analizi              │           │
+  │                                                          │           │
+  ▼                                                          │           │
+artifacts ──────── tornado chart vb. figür üretimi ──────────┘           │
+                                                                         │
+report ◀─────────────────────────────────────────────────────────────────┘
+  │                3 katman: executive_summary / technical_output / action_directives
+  ▼
+END               (isteğe bağlı: write_report → HTML/DOCX/PDF)
+</code></pre>
+<h3>Node × LM katmanı × State sözleşmesi</h3>
+<p>Her node'un hangi modeli kullandığı ve state'e ne yazdığı — prompt geliştirirken
+&quot;hangi Signature'a dokunursam neyi etkilerim&quot; sorusunun cevabı:</p>
+<table>
+<thead>
+<tr>
+<th>Node</th>
+<th>DSPy modülü (tipi)</th>
+<th>LM</th>
+<th>Okur</th>
+<th>Yazar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>intake</code></td>
+<td>GateKeeper (CoT)</td>
+<td>fast</td>
+<td><code>raw_prompt</code>, <code>data_path</code></td>
+<td><code>cleaned_prompt</code>, <code>data_bundle</code>, <code>data_summary</code></td>
+</tr>
+<tr>
+<td><code>requirement</code></td>
+<td>RequirementAnalyst (Predict)</td>
+<td>fast</td>
+<td><code>cleaned_prompt</code>, <code>data_summary</code></td>
+<td><code>is_complete</code>, <code>missing_items</code>, <code>explicit_goal</code>, <code>constraints</code>, <code>output_spec</code></td>
+</tr>
+<tr>
+<td><code>clarify</code></td>
+<td>— (LLM yok)</td>
+<td>—</td>
+<td><code>missing_items</code>, <code>auto_mode</code></td>
+<td><code>user_clarification</code> / <code>auto_assumptions_log</code></td>
+</tr>
+<tr>
+<td><code>refine</code></td>
+<td>PromptRefiner (CoT)</td>
+<td>fast</td>
+<td>G-O-C alanları</td>
+<td><code>essential_prompt</code>, <code>strict_constraints</code>, <code>problem_type</code></td>
+</tr>
+<tr>
+<td><code>route</code></td>
+<td>StrategyRouter (CoT)</td>
+<td>fast</td>
+<td><code>essential_prompt</code>, <code>problem_type</code></td>
+<td><code>execution_path</code>, <code>rationale</code></td>
+</tr>
+<tr>
+<td><code>code_branch</code> 1/4</td>
+<td>AlgoSelector (CoT)</td>
+<td>reasoning</td>
+<td><code>essential_prompt</code>, <code>problem_type</code>, <code>data_summary</code></td>
+<td><code>target_algorithm</code>, <code>target_library</code></td>
+</tr>
+<tr>
+<td><code>code_branch</code> 2/4</td>
+<td>ConstraintAdapter (Predict)</td>
+<td>reasoning</td>
+<td><code>strict_constraints</code>, <code>target_library</code></td>
+<td><code>library_specific_constraints</code></td>
+</tr>
+<tr>
+<td><code>code_branch</code> 3/4</td>
+<td>OutputSpecEngineer (Predict)</td>
+<td>reasoning</td>
+<td><code>output_spec</code>, <code>target_library</code></td>
+<td><code>code_output_spec</code></td>
+</tr>
+<tr>
+<td><code>code_branch</code> 4/4</td>
+<td>ReActCodeGenerator (ReAct + sandbox tool)</td>
+<td>reasoning</td>
+<td>yukarıdakilerin hepsi</td>
+<td><code>final_code</code>, <code>execution_result</code>, <code>retry_count</code>+1</td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td>ResultValidator (CoT)</td>
+<td>reasoning</td>
+<td><code>essential_prompt</code>, <code>strict_constraints</code>, <code>execution_result</code></td>
+<td><code>is_valid</code>, <code>confidence_score</code>, <code>validation_notes</code></td>
+</tr>
+<tr>
+<td><code>sensitivity</code></td>
+<td>SensitivityAnalysis (CoT)</td>
+<td>reasoning</td>
+<td>çözüm + parametreler</td>
+<td><code>sensitivity_results</code></td>
+</tr>
+<tr>
+<td><code>artifacts</code></td>
+<td>TornadoChart (Predict)</td>
+<td>fast</td>
+<td><code>sensitivity_results</code></td>
+<td><code>figures</code></td>
+</tr>
+<tr>
+<td><code>chain_branch</code></td>
+<td>AnalyticalEngine (CoT)</td>
+<td>fast</td>
+<td><code>essential_prompt</code></td>
+<td><code>raw_result</code>, <code>solution_path</code></td>
+</tr>
+<tr>
+<td><code>report</code></td>
+<td>FinalReportGenerator (CoT)</td>
+<td>fast</td>
+<td>tüm sonuç alanları</td>
+<td><code>executive_summary</code>, <code>technical_output</code>, <code>action_directives</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Okuma önerisi:</strong> Akışa hâkim olmak için sırasıyla <code>graph.py</code> (topoloji +
+conditional edge fonksiyonları, dosyanın başındaki ASCII şema), <code>state.py</code>
+(alan grupları faz faz), sonra tek tek node dosyaları. Her node dosyasının
+docstring'i &quot;Reads / Writes&quot; bölümü içeriyor.</p>
+<h3>Retry semantiği (sık karışan nokta)</h3>
+<ul>
+<li><strong>İç döngü</strong> (<code>generate.py</code>): ReAct, sandbox'tan hata görürse aynı LLM
+oturumu içinde en fazla 3 kez kodu düzeltir. Bu, validate'e hiç gitmeden olur.</li>
+<li><strong>Dış döngü</strong> (<code>graph.py: _route_after_validate</code>): validate <code>is_valid=False</code>
+derse ve <code>retry_count &lt; 3</code> ise code_branch <strong>baştan</strong> koşulur (algoritma
+seçimi dahil). <code>retry_count</code> her code_branch geçişinde +1 artar → toplam en
+fazla 3 code_branch geçişi. Hak bitince rapor yine de yazılır (başarısızlık
+raporu — makalede &quot;graceful degradation&quot;).</li>
+</ul>
+<hr />
+<h2>13. DSPy Optimizasyon Mantığı</h2>
+<p>Bu bölüm, sistemde kurgulanmış optimizasyon mantığını sıfırdan öğretir.
+Amaç: İş 6'yı (MIPROv2 koşusu) bilinçli parametrelerle yürütebilmek ve
+makalede &quot;neden DSPy&quot; sorusunu savunabilmek.</p>
+<h3>13.1 Temel fikir: prompt bir string değil, derlenebilir bir program</h3>
+<p>Klasik yaklaşımda prompt elle yazılmış bir f-string'dir; iyileştirmek =
+elle deneme-yanılma. DSPy'da ise üç ayrı katman var:</p>
+<ol>
+<li><strong>Signature</strong> — <em>ne</em> istediğinin bildirimsel tanımı. Docstring = sistem
+talimatı; <code>InputField</code>/<code>OutputField</code> desc'leri = alan talimatları; tip
+anotasyonları (<code>bool</code>, <code>list[str]</code>) = çıktı formatı zorlaması.
+Projede: <code>src/iesolver/signatures/*.py</code> (13 dosya).</li>
+<li><strong>Module</strong> — <em>nasıl</em> çıkarım yapılacağı: <code>Predict</code> (tek atış),
+<code>ChainOfThought</code> (önce gerekçe ürettirir), <code>ReAct</code> (düşün → araç çağır →
+gözlemle döngüsü). Projede her node bir modül singleton'ı kurar,
+örn. <code>_validator = dspy.ChainOfThought(ResultValidatorSignature)</code>.</li>
+<li><strong>Optimizer (teleprompter)</strong> — Signature'daki talimat metnini ve few-shot
+örnekleri <em>otomatik arayan</em> katman. Elle prompt mühendisliği yerine:
+metrik + eğitim verisi → en iyi talimat kombinasyonu.</li>
+</ol>
+<p>Bu ayrım makalenin metodolojik iddiası: prompt'lar sistemin parametreleridir
+ve veriyle optimize edilebilir — model değişince yeniden derlenir (RQ3,
+model-agnostiklik bunun üstüne kurulu).</p>
+<h3>13.2 Optimizasyonun üç bileşeni bu projede nerede?</h3>
+<table>
+<thead>
+<tr>
+<th>Bileşen</th>
+<th>Ne</th>
+<th>Projede</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program</td>
+<td>Optimize edilecek DSPy modülleri</td>
+<td><code>IESolverProgram</code> (<code>_optimization.py</code>) — 11 modül singleton'ını attribute olarak tutar; <code>forward(prompt)</code> tüm pipeline'ı <code>auto_mode=True</code> ile koşar</td>
+</tr>
+<tr>
+<td>Metrik</td>
+<td>Başarı ölçüsü, <code>(example, pred) → 0/1</code></td>
+<td><code>correctness_metric</code> (<code>optimize_mipro.py</code>) — <code>execution_result</code> içindeki sayı, ground truth'a <code>numerical_match</code> ile toleranslı karşılaştırılır</td>
+</tr>
+<tr>
+<td>Trainset</td>
+<td>Etiketli örnekler</td>
+<td>NL4Opt <strong>train split</strong> JSONL → <code>dspy.Example(prompt=..., optimal_value=...)</code></td>
+</tr>
+</tbody>
+</table>
+<h3>13.3 Kritik tasarım: singleton referans paylaşımı</h3>
+<p>En zarif nokta ve makalede vurgulanmaya değer:</p>
+<pre><code>nodes/validate.py:      _validator = dspy.ChainOfThought(...)   ← canlı nesne
+_optimization.py:       self.validator = _validator             ← AYNI nesne
+</code></pre>
+<p><code>IESolverProgram</code> modülleri <strong>kopyalamaz</strong>, aynı Python nesnelerine referans
+tutar. MIPROv2 <code>self.validator</code>'ın prompt'unu güncellediğinde, pipeline'daki
+<code>call_with_reasoning_lm(_validator, ...)</code> çağrısı da otomatik olarak yeni
+prompt'u kullanır. Böylece:</p>
+<ul>
+<li>Optimizasyon sırasında <code>forward()</code> = gerçek <code>solve()</code> → <strong>uçtan uca (end-to-end)
+değerlendirme</strong>: bir ara-modülün prompt değişikliği, nihai sayısal doğruluk
+üzerinden puanlanır.</li>
+<li><code>program.save(path)</code> → talimatlar + few-shot demolar JSON'a yazılır.</li>
+<li><code>load_compiled_graph(path)</code> → aynı singleton'lara geri yüklenir; LangGraph
+yeniden derlenmez, <code>solve()</code> artık optimize prompt'larla çalışır.</li>
+</ul>
+<p><em>(Yan etki: singleton'lar paylaşıldığı için <code>optimize_mipro.py</code> bilinçli
+olarak <code>num_threads=1</code> kullanır — paralel deneme thread'leri aynı nesnenin
+prompt'unu ezerdi.)</em></p>
+<h3>13.4 MIPROv2 içeride ne yapar? (üç aşama)</h3>
+<ol>
+<li><strong>Bootstrapping (demo toplama):</strong> Mevcut (ham) programla trainset koşulur.
+Metriği geçen koşuların izlerinden (trace) her modül için aday few-shot
+örnekler toplanır — &quot;başarılı geçmiş, örnek olur.&quot;
+(<code>--max-bootstrapped-demos</code>, <code>--max-labeled-demos</code> bunların üst sınırı.)</li>
+<li><strong>Talimat önerisi (instruction proposal):</strong> Teacher LM (bizde reasoning
+model veya <code>--teacher-model</code>), her modül için <code>--num-candidates</code> adet
+alternatif sistem talimatı yazar. Bunu yaparken program yapısına, veri
+özetine ve 1. aşamadaki demolara bakar. Teacher'ın <code>temperature=0.7</code>
+olması kasıtlı: aday çeşitliliği gerekir.</li>
+<li><strong>Bayes arama:</strong> <code>--num-trials</code> deneme boyunca &quot;modül × talimat × demo&quot;
+kombinasyonları trainset (mini-batch) üzerinde metrikle skorlanır;
+Bayesian optimizasyon umut vadeden bölgeye yoğunlaşır. En iyi kombinasyon
+kazanır ve <code>compiled/*.json</code>'a yazılır.</li>
+</ol>
+<p><strong>Kredi ataması (credit assignment) nasıl çözülüyor?</strong> 11 modüllü zincirde
+&quot;hangi prompt kötü&quot; sorusunu MIPROv2 açıkça cevaplamaz; bunun yerine arama
+uzayında farklı kombinasyonları dener ve <em>nihai</em> metriği yükselten
+kombinasyonları seçer. Bu yüzden metrik uçtan uca doğruluk olmalı — ara
+adım metriği koymaya çalışmak (ör. &quot;algoritma seçimi doğru mu&quot;) hem etiket
+gerektirir hem de pipeline-level optimizasyonun avantajını bozar.</p>
+<h3>13.5 Maliyet sezgisi ve parametre reçetesi</h3>
+<p>Kaba formül: <code>LLM çağrısı ≈ num_trials × minibatch × (problem başına ~8 pipeline çağrısı)</code> + teacher çağrıları.</p>
+<table>
+<thead>
+<tr>
+<th>Senaryo</th>
+<th>Parametreler</th>
+<th>Kaba maliyet (Flash sınıfı)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dry-run</td>
+<td><code>--dry-run</code></td>
+<td>$0 (LLM çağrısı yok)</td>
+</tr>
+<tr>
+<td>Pilot</td>
+<td><code>--max-train 40 --num-candidates 5 --num-trials 10</code></td>
+<td>&lt; $2</td>
+</tr>
+<tr>
+<td>Tam (makale)</td>
+<td><code>--num-candidates 15 --num-trials 30 --dev-data ...</code></td>
+<td>&lt; $10; Pro-teacher ~20×</td>
+</tr>
+</tbody>
+</table>
+<p>Kurallar (yol haritası &quot;Kritik Kurallar&quot; ile aynı):</p>
+<ul>
+<li><strong>Yalnızca train split</strong> — NL4Opt test 289'una asla dokunma (data leakage).</li>
+<li>Optimizasyonun kendi maliyetini kaydet — makalede raporlanır.</li>
+<li>Optimizasyon = deney konfigürasyonudur: <code>compiled/*.json</code> sürümlenir,
+&quot;ham vs optimize&quot; iki ayrı koşu olarak raporlanır (A5).</li>
+</ul>
+<h3>13.6 Karar noktası: 11 modül mü, 2 kritik modül mü?</h3>
+<p>Yol haritası İş 6, maliyet için yalnız AlgoSelector + ReAct'in optimize
+edilmesini öneriyor; mevcut <code>IESolverProgram</code> 11 modülün hepsini açıyor.
+Kısıtlamak istersen mekanizma basit: MIPROv2 yalnızca programın <strong>attribute
+olarak gördüğü</strong> modülleri optimize eder; <code>forward()</code> ise her durumda tüm
+pipeline'ı koşar. Yani <code>IESolverProgram.__init__</code> içinde yalnız
+<code>self.selector</code> ve <code>self.react</code> bırakılırsa, diğer 9 modül ham prompt'larıyla
+çalışmaya devam eder ama optimize edilmez → arama uzayı ve teacher maliyeti
+ciddi düşer. Önerim: pilotu 11 modülle koş; süre/maliyet taşarsa 2 modüle indir
+ve bu kararı makalede gerekçelendir (&quot;targeted optimization&quot;).</p>
+<h3>13.7 Prompt geliştirme ile optimizasyonun ilişkisi</h3>
+<p>Elle prompt iyileştirme (§7) ve MIPROv2 rakip değil, sıralı:</p>
+<ol>
+<li><strong>Önce elle:</strong> Signature docstring'lerini G-O-C netliğinde yaz — MIPROv2
+ham talimatı &quot;tohum&quot; olarak kullanır; iyi tohum, iyi adaylar üretir.</li>
+<li><strong>Sonra otomatik:</strong> MIPROv2 koşusu → A5 konfigürasyonu.</li>
+<li><strong>Code freeze'den sonra</strong> Signature'lara dokunulmaz; değişiklik = etkilenen
+tüm koşuların tekrarı.</li>
+</ol>
+<hr />
+<h2>14. Makale Yol Haritası — Kodda Tamamlanacaklar</h2>
+<p><code>MAKALE_YOL_HARITASI.md</code>'deki 18 işten kod tarafına dokunanlar. Durum
+sütunu 2026-07-04 itibarıyla.</p>
+<table>
+<thead>
+<tr>
+<th>İş</th>
+<th>Kodda yapılacak</th>
+<th>İlgili dosyalar</th>
+<th>Durum</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Sistem incelemesi</td>
+<td>A4 düzeltmesi ✅ (2026-07-04) + <code>IMPROVEMENTS.md</code> + <code>v1.0-experiments</code> git tag</td>
+<td><code>IMPROVEMENTS.md</code> ⬜, git tag ⬜</td>
+<td>🟡 A4 ✅ / kalanlar ⬜</td>
+</tr>
+<tr>
+<td>3. Benchmark verileri</td>
+<td>Temizlenmiş NL4Opt + IndustryOR JSONL'lerini indir, <code>ie-eval/datasets/</code> altına koy, 5–10 örneği elle doğrula</td>
+<td><code>ie-eval/datasets/</code> (boş) — adaptörler hazır: <code>nl4opt.py</code>, <code>industryor.py</code></td>
+<td>🟡 Adaptör ✅ / veri ⬜</td>
+</tr>
+<tr>
+<td>4. IE-Case seti</td>
+<td>5–8 problem + veri dosyaları (csv/xlsx/sqlite) + ground truth + README</td>
+<td><code>datasets/ie_case/</code> — adaptör hazır: <code>ie_case.py</code></td>
+<td>🟡 Adaptör ✅ / veri ⬜</td>
+</tr>
+<tr>
+<td>5. Pilot koşu</td>
+<td>Deney konfigürasyon dosyası (<code>config_experiments.yaml</code> benzeri) + 20–30 problemlik uçtan uca koşu + hata ayıklama</td>
+<td><code>ie-eval/runner.py</code> (hazır), yeni config dosyası</td>
+<td>🔴 Yapılacak</td>
+</tr>
+<tr>
+<td>6. MIPROv2</td>
+<td>Train split ayır → pilot koşu → tam koşu → <code>compiled/iesolver_mipro.json</code>; 2-modül kısıtlama kararı (§13.6)</td>
+<td><code>scripts/optimize_mipro.py</code> ✅, <code>compiled/</code> (boş)</td>
+<td>🟡 Script ✅ / koşu ⬜</td>
+</tr>
+<tr>
+<td>7. Ana koşular</td>
+<td>Code freeze sonrası 3× koşu; baseline'lar aynı protokolle</td>
+<td><code>runner.py</code>, <code>store.py</code>, <code>baselines.py</code> — hepsi hazır</td>
+<td>🟢 Altyapı ✅ / koşu ⬜</td>
+</tr>
+<tr>
+<td>8. Ablasyonlar</td>
+<td>A1–A5 koşuları (A4 düzeltmesi yapıldı)</td>
+<td><code>ablations.py</code> ✅</td>
+<td>🟢 Altyapı ✅ / koşu ⬜</td>
+</tr>
+<tr>
+<td>9. İkinci model</td>
+<td><code>.env</code>'de model değişikliği + kısa pilot — kod değişikliği gerekmez</td>
+<td><code>lm.py</code>, <code>config.py</code></td>
+<td>🟢 Hazır</td>
+</tr>
+<tr>
+<td>10. Analiz + figürler</td>
+<td>McNemar/bootstrap mevcut (<code>stats.py</code>); <strong>figür üretim scriptleri eksik</strong> (ablasyon çubuk, maliyet-doğruluk saçılım, tornado, hata dağılımı — matplotlib, PDF vektör)</td>
+<td><code>ie-eval/analysis/</code> kısmen ✅, <code>analysis/figures.py</code> ⬜</td>
+<td>🟡 Kısmen</td>
+</tr>
+<tr>
+<td>11. Hata analizi</td>
+<td>Otomatik <code>error_class</code> metrics'te var; etiketleme elle yapılır, ekstra kod gerekmez (isteğe bağlı: trace dökme yardımcı scripti)</td>
+<td><code>metrics.py</code> ✅</td>
+<td>🟢 Hazır</td>
+</tr>
+<tr>
+<td>12. Vaka çalışmaları</td>
+<td>Rapor pipeline'ı hazır; yalnız koşu + arşivleme</td>
+<td><code>report/</code> ✅</td>
+<td>🟢 Hazır</td>
+</tr>
+<tr>
+<td>13. Tekrarlanabilirlik paketi</td>
+<td>Public README (kurulum/koşum/tablo üretimi), LICENSE, Zenodo bağlama</td>
+<td><code>README.md</code> genişletme, <code>LICENSE</code> ⬜</td>
+<td>🔴 Yapılacak</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Kritik yol (kod gözüyle):</strong> İş 3 veri → İş 5 pilot → İş 6 MIPROv2 →
+İş 7 ana koşular. İş 10'un figür scriptleri, koşular
+sürerken paralel yazılabilir.</p>
+
+</body>
+</html>

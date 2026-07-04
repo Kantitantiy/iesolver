@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IE Solver Report</title>
+  <style>
+    :root {
+      --accent: #1d4ed8;
+      --accent-light: #eff6ff;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --green: #166534;
+      --green-bg: #dcfce7;
+      --red: #991b1b;
+      --red-bg: #fee2e2;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* Header */
+    header { background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); color: white; padding: 2rem; border-radius: 10px; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,.1); }
+    header h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.01em; }
+    .goal-text { font-size: 0.95rem; opacity: 0.9; margin-bottom: 1rem; border-left: 3px solid rgba(255,255,255,.4); padding-left: 0.75rem; }
+    .header-meta { display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; opacity: 0.8; flex-wrap: wrap; }
+    .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-valid   { background: var(--green-bg); color: var(--green); }
+    .badge-invalid { background: var(--red-bg); color: var(--red); }
+    .result-pill { margin-top: 1rem; background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 0.5rem 0.85rem; font-family: 'Courier New', monospace; font-size: 0.9rem; }
+    .result-pill strong { display: block; font-size: 0.7rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.1rem; }
+
+    /* Sections */
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    section h2 { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent-light); display: flex; align-items: center; gap: 0.5rem; }
+    section h2 .icon { font-size: 1.1rem; }
+
+    /* Markdown-rendered content */
+    .content p  { margin-bottom: 0.75rem; }
+    .content ul, .content ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+    .content li { margin-bottom: 0.25rem; }
+    .content h1, .content h2, .content h3 { font-size: 0.95rem; font-weight: 600; margin: 1rem 0 0.4rem; color: var(--text); }
+    .content strong { font-weight: 600; }
+    .content pre  { background: #f1f5f9; border: 1px solid var(--border); border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.82rem; margin: 0.75rem 0; }
+    .content code { background: #f1f5f9; border: 1px solid #e2e8f0; padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.83rem; font-family: 'Courier New', monospace; }
+    .content pre code { background: none; border: none; padding: 0; }
+    .content blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--muted); margin: 0.75rem 0; }
+
+    /* Metrics table */
+    .metrics-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .metrics-table th { background: #f8fafc; font-weight: 600; text-align: left; padding: 0.4rem 0.75rem; border: 1px solid var(--border); }
+    .metrics-table td { padding: 0.35rem 0.75rem; border: 1px solid var(--border); }
+    .metrics-table tr:nth-child(even) td { background: #fafafa; }
+
+    /* Charts */
+    .chart-img { max-width: 100%; border-radius: 6px; border: 1px solid var(--border); margin: 0.5rem 0; }
+
+    /* Footer */
+    footer { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 2.5rem; padding: 1rem; border-top: 1px solid var(--border); }
+
+    @media print {
+      body { background: white; }
+      .container { max-width: 100%; padding: 0; }
+      section { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Industrial Engineering Problem Report</h1>
+    <p class="goal-text">Calculate the Economic Order Quantity (EOQ) to minimize total inventory costs.</p>
+    <div class="header-meta">
+      <span>Generated: 2026-07-04 10:52</span>
+      
+        
+          <span class="badge badge-valid">✓ Solution Validated</span>
+        
+      
+    </div>
+    
+    <div class="result-pill">
+      <strong>Optimal Result</strong>
+      EOQ: 707
+Total Annual Cost: 1414.2135785007072
+    </div>
+    
+  </header>
+
+  <section>
+    <h2><span class="icon">📋</span> Executive Summary</h2>
+    <div class="content"><p>The inventory optimization analysis indicates that the company should adopt an order quantity of 707 units per procurement cycle to achieve the lowest possible total annual inventory cost of $1,414.21. This strategy balances the administrative burden of placing orders against the capital tied up in warehouse stock.</p>
+<p><strong>Sensitivity Analysis:</strong></p>
+<ul>
+<li><strong>Demand Volatility:</strong> If annual demand increases by 10% (to 11,000 units), the optimal order quantity will shift to approximately 742 units, and total costs will increase by roughly 4.8%.</li>
+<li><strong>Cost Sensitivity:</strong> The model is relatively robust; however, if holding costs ($H$) rise due to increased storage fees, the optimal order quantity should be reduced to prevent excessive capital stagnation. We recommend a quarterly review of these parameters to ensure the model remains aligned with current market conditions.</li>
+</ul>
+</div>
+  </section>
+
+  <section>
+    <h2><span class="icon">🔬</span> Technical Analysis</h2>
+    <div class="content"><p>The optimization was performed using the deterministic EOQ model: $EOQ = \sqrt{\frac{2DS}{H}}$.</p>
+<ul>
+<li><strong>Parameters:</strong> Annual Demand ($D$) = 10,000 units; Ordering Cost per Order ($S$) = $50; Holding Cost per unit per year ($H$) = $2.</li>
+<li><strong>Computational Methodology:</strong> The raw output of 707.106 was discretized to 707 units to align with standard inventory procurement constraints.</li>
+<li><strong>Performance Metrics:</strong>
+<ul>
+<li>Optimal Order Quantity: 707 units.</li>
+<li>Total Annual Inventory Cost: $1,414.21.</li>
+</ul>
+</li>
+<li><strong>Confidence Score:</strong> 100/100. The model demonstrates high stability given the static nature of the input variables.</li>
+</ul>
+</div>
+  </section>
+
+  
+  <section>
+    <h2><span class="icon">📊</span> Sensitivity Analysis</h2>
+    <div class="content"><h2>[analysis_type: perturbation]
+Parameter            | Base       | -10%       | -5%        | +5%        | +10%</h2>
+<p>Demand (D)           | 10000.00   | 1341.64    | 1378.40    | 1449.14    | 1483.24<br />
+Setup Cost (S)       | 50.00      | 1341.64    | 1378.40    | 1449.14    | 1483.24<br />
+Holding Cost (H)     | 2.00       | 1341.64    | 1378.41    | 1449.14    | 1483.24</p>
+</div>
+  </section>
+  
+
+  <section>
+    <h2><span class="icon">✅</span> Action Directives</h2>
+    <div class="content"><ol>
+<li><strong>Procurement Department:</strong> Standardize all future purchase orders to a fixed quantity of 707 units per order. Do not deviate from this quantity unless annual demand forecasts change by more than 5%.</li>
+<li><strong>Warehouse Management:</strong> Allocate sufficient storage space for 707 units per cycle. Ensure that inventory turnover is monitored to confirm that the average stock level remains near 353.5 units (half of the order quantity).</li>
+<li><strong>Finance Department:</strong> Budget an annual expenditure of $1,414.21 for combined ordering and holding costs based on the current demand of 10,000 units.</li>
+<li><strong>Supply Chain Analytics:</strong> Re-evaluate these parameters in 90 days to account for any fluctuations in ordering costs or storage fees.</li>
+</ol>
+</div>
+  </section>
+
+  
+
+  
+  <section>
+    <h2><span class="icon">⚡</span> Performance Metrics</h2>
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th>Node</th>
+          <th>LLM Calls</th>
+          <th>Tokens In</th>
+          <th>Tokens Out</th>
+          <th>Cost (USD)</th>
+          <th>Latency (ms)</th>
+        </tr>
+      </thead>
+      <tbody>
+        
+        <tr>
+          <td><code>report</code></td>
+          <td>1</td>
+          <td>1048</td>
+          <td>680</td>
+          <td>$0.0013</td>
+          <td>3326</td>
+        </tr>
+        
+      </tbody>
+    </table>
+  </section>
+  
+
+  <footer>
+    Generated by <strong>iesolver</strong> &middot; Powered by DSPy + LangGraph
+  </footer>
+
+</div>
+</body>
+</html>
