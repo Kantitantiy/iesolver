@@ -18,6 +18,12 @@ import textwrap
 from datetime import datetime
 from pathlib import Path
 
+# Windows terminali cp1252 kullanabilir; UTF-8'e zorla.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # v4/src altında çalışabilmesi için sys.path ayarla
 _ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_ROOT / "src"))
