@@ -17,6 +17,7 @@ derlemesi devreye girer.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -110,6 +111,119 @@ def solve(
 
     return final_state  # type: ignore[return-value]
 
+def stream_solve(
+    prompt: str,
+    data_path: Path | str | None = None,
+    *,
+    auto_mode: bool = True,
+    thread_id: str | None = None,
+    checkpoint_db: Path | None = None,
+    enable_refiner: bool = True,
+    enable_validator_retry: bool = True,
+    fast_only: bool = False,
+) -> Generator[tuple[str, dict[str, Any]], None, None]:
+    """Like solve(), but yields (node_name, partial_state) after each node completes.
+
+    Her node tamamlandığında o node'un yazdığı alanları anında döndürür.
+    Aşama aşama ilerlemeyi terminalde görmek için kullanın.
+
+    Usage::
+
+        for node_name, partial in stream_solve("EOQ problemi..."):
+            print(f"✓ {node_name}: {list(partial.keys())}")
+
+    Parameters
+    ----------
+    prompt, data_path, auto_mode, thread_id, checkpoint_db :
+        solve() ile aynı.
+
+    Yields
+    ------
+    (node_name, partial_state) :
+        node_name  — tamamlanan LangGraph node'unun adı
+        partial_state — o node'un state'e yazdığı alanlar (sadece o node'un çıktısı)
+    """
+    settings.ensure_directories()
+    seed = empty_state(
+        raw_prompt=prompt,
+        data_path=Path(data_path) if data_path is not None else None,
+        auto_mode=auto_mode,
+        enable_refiner=enable_refiner,
+        enable_validator_retry=enable_validator_retry,
+        fast_only=fast_only,
+    )
+    config: dict[str, Any] = {
+        "configurable": {"thread_id": thread_id or str(uuid4())}
+    }
+    with open_checkpointer(checkpoint_db) as saver:
+        graph = build_graph(checkpointer=saver)
+        for chunk in graph.stream(seed, config=config, stream_mode="updates"):
+            for node_name, partial_state in chunk.items():
+                yield node_name, partial_state
+
+
+def show_llm_history(n: int = 3) -> None:
+    """Print the last n LLM calls: prompts sent and responses received.
+
+    LLM'e gönderilen tam prompt'ları ve alınan yanıtları terminale basar.
+    Her aşamadan sonra nelerin gönderilip alındığını görmek için kullanın.
+
+    Parameters
+    ----------
+    n :
+        Kaç LLM çağrısı gösterilsin (en yeniden geriye doğru). Default: 3.
+
+    Usage::
+
+        state = solve("EOQ problemi...")
+        show_llm_history(n=5)   # son 5 çağrıyı göster
+    """
+    fast_lm = get_fast_lm()
+    reasoning_lm = get_reasoning_lm()
+
+    # Her ikisinin geçmişini birleştir, zamana göre sırala
+    combined: list[dict[str, Any]] = []
+    combined.extend(fast_lm.history or [])
+    combined.extend(reasoning_lm.history or [])
+
+    if not combined:
+        print("Henüz LLM çağrısı yapılmadı.")
+        return
+
+    recent = combined[-n:]
+    sep = "─" * 70
+
+    for i, entry in enumerate(recent, 1):
+        model = entry.get("model", "?")
+        messages = entry.get("messages", [])
+        response = entry.get("response", {})
+        usage = entry.get("usage") or {}
+
+        print(f"\n{sep}")
+        print(f"  [{i}/{len(recent)}] Model: {model}")
+        print(f"  Tokens: {usage.get('prompt_tokens', '?')} giriş / "
+              f"{usage.get('completion_tokens', '?')} çıkış")
+        print(sep)
+
+        # Gönderilen mesajlar
+        for msg in messages:
+            role = msg.get("role", "?").upper()
+            content = msg.get("content", "")
+            if isinstance(content, list):
+                content = " ".join(c.get("text", "") for c in content if isinstance(c, dict))
+            print(f"\n  ── {role} ──")
+            print(f"  {str(content)[:600]}{'...' if len(str(content)) > 600 else ''}")
+
+        # Alınan yanıt
+        choices = response.get("choices", []) if isinstance(response, dict) else []
+        if choices:
+            reply = choices[0].get("message", {}).get("content", "")
+            print(f"\n  ── ASSISTANT ──")
+            print(f"  {str(reply)[:800]}{'...' if len(str(reply)) > 800 else ''}")
+
+    print(f"\n{sep}\n")
+
+
 def is_interrupted(state: SolverState) -> bool:
     """Return True iff the graph paused awaiting user clarification."""
     return "__interrupt__" in state  # type: ignore[operator]
@@ -125,6 +239,8 @@ __all__ = [
     "get_reasoning_lm",
     "is_interrupted",
     "run_code",
+    "show_llm_history",
     "solve",
+    "stream_solve",
     "write_report",
 ]

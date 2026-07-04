@@ -95,21 +95,21 @@ START
 [route]            ← StrategyRouter: execution_path = CODE | NO_CODE
   │
   ├─[NO_CODE]──► [chain_branch] ──────────────────────────────────┐
-  │              (analytical, formül tabanlı)                      │
-  │                                                                │
+  │              (analytical, formül tabanlı)                     │
+  │                                                               │
   └─[CODE]─────► [code_branch]                                    │
-                    │  (algo_select → constraint_adapt →           │
-                    │   output_spec → generate/ReAct)              │
-                    ▼                                              │
-                 [validate]                                        │
-                  /      \                                         │
-       [geçersiz+retry] [geçersiz+limit/A2]  [geçerli]           │
-              │                  │               │                 │
+                    │  (algo_select → constraint_adapt →          │
+                    │   output_spec → generate/ReAct)             │
+                    ▼                                             │
+                 [validate]                                       │
+                  /      \                                        │
+       [geçersiz+retry] [geçersiz+limit/A2]  [geçerli]            │
+              │                  │               │                │
         code_branch           [report] ◄─────── [sensitivity]     │
-        (max 3 kez)                              │                 │
-                                              [artifacts]          │
-                                                  │                │
-                                               [report] ◄──────────┘
+        (max 3 kez)                              │                │
+                                              [artifacts]         │
+                                                  │               │
+                                               [report] ◄─────────┘
                                                   │
                                                  END
 ```
@@ -898,4 +898,100 @@ state = solve('EOQ: yıllık talep 10000, sipariş maliyeti 50 TL, stok tutma ma
 print(state['executive_summary'])
 write_report(state, 'output/report.html', format='html')
 "
+```
+
+## DSPy Signature optimizasyonunu nerede nasıl yapıyoruz?                                                                                                                                                                                                                                                            
+  ⎿  ⧉ Selected 1 lines from ..\..\..\..\..\..\mnt\c\Data\OneDrive - arel.edu.tr\Ders\20-Makale\Dspy\v4\SYSTEM.md in PyCharm
+
+● Bu projedeki optimizasyon tamamen MIPROv2 ile yapılıyor ve A5 ablasyonuna karşılık geliyor. İki katman var:
+
+  ---
+  1. Ne optimize ediliyor?
+```
+  Her DSPy Signature'ın iki öğrenilebilir bileşeni var:
+  
+  - Instruction — "Bu bir EOQ problemi. Aşağıdaki kısıtları dikkat et..." gibi görev tanımı
+  - Few-shot demo'lar — LLM'e örnek (prompt → beklenen çıktı) çiftleri
+
+  MIPROv2 bunları otomatik arar; siz sadece bir doğruluk metriği ve eğitim verisi veriyorsunuz.
+```
+  ---
+  2. Nasıl çalışıyor?
+```
+  NL4Opt train split (JSONL)
+          │
+          ▼
+  IESolverProgram.forward(prompt) → solve() → execution_result
+          │
+          ▼
+  correctness_metric(example, pred) → 0.0 veya 1.0
+          │
+          ▼
+  MIPROv2 Bayesian optimizasyon (Optuna)
+    ├── Teacher LM → num_candidates aday instruction üretir (her modül için)
+    ├── Bootstrap → eğitim verisi üzerinde few-shot örnek toplar
+    └── num_trials deneme → en yüksek accuracy veren kombinasyonu seçer
+          │
+          ▼
+  compiled_program.save("compiled/iesolver_mipro.json")
+```
+  ---
+  3. Kritik teknik karar — Singleton paylaşımı
+```
+  Tüm node'lar modül yüklenince singleton yaratır:
+
+  # nodes/intake.py
+  _gatekeeper = dspy.ChainOfThought(GatekeeperSignature)
+
+  IESolverProgram bunları kopya değil, alias olarak tutar:
+
+  class IESolverProgram(dspy.Module):
+      def __init__(self):
+          from iesolver.nodes.intake import _gatekeeper
+          self.gatekeeper = _gatekeeper   # aynı Python nesnesi
+
+  MIPROv2 self.gatekeeper.predict.signature üzerinde instruction güncellediğinde, call_with_fast_lm(_gatekeeper, ...) da güncellenmiş instruction'ı kullanır — ayrı bir nesne yok.
+
+  program.save(path) bu güncellenmiş instruction + demo'ları JSON'a yazar.
+```
+  ---
+  4. Nerede çalıştırılıyor?
+```bash
+  # Adım 1: Dry-run (setup kontrolü, LLM çağrısı yok)
+  uv run python scripts/optimize_mipro.py \
+      --train-data data/nl4opt_train_cleaned.jsonl \
+      --output compiled/iesolver_mipro.json \
+      --dry-run
+
+  # Adım 2: Pilot (~$2, ~400 LLM çağrısı)
+  uv run python scripts/optimize_mipro.py \
+      --train-data data/nl4opt_train_cleaned.jsonl \
+      --output compiled/iesolver_mipro.json \
+      --max-train 40 --num-candidates 5 --num-trials 10
+
+  # Adım 3: Tam koşu (makale için, ~$10, Pro-class teacher)
+  uv run python scripts/optimize_mipro.py \
+      --train-data data/nl4opt_train_cleaned.jsonl \
+      --dev-data   data/nl4opt_dev_cleaned.jsonl \
+      --output compiled/iesolver_mipro_full.json \
+      --num-candidates 15 --num-trials 30 \
+      --teacher-model gemini/gemini-2.0-pro-exp
+```
+  ---
+  5. Optimize edilmiş program nasıl kullanılıyor?
+```python
+  # A5 ablasyonu — benchmark koşusunda
+  from ie_eval.ablations import make_a5_solve
+  from ie_eval.runner import run_dataset
+
+  solve_fn = make_a5_solve(compiled_path=Path("compiled/iesolver_mipro.json"))
+  # İlk çağrıda: load_compiled_graph() → singleton'ları in-place günceller
+  # Sonraki solve() çağrıları optimize edilmiş instruction'larla çalışır
+
+  records = run_dataset(dataset, config_id="A5_mipro", solve_fn=solve_fn)
+```
+  ---
+  6. Şu an neden A5 koşusu yok?
+```
+  NL4Opt temizlenmiş JSONL verisi henüz yok (OptiMind supplementary'den gelmesi gerekiyor). Veri gelince --dry-run ile setup doğrulanacak, ardından pilot koşu yapılacak.
 ```
