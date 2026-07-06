@@ -19,6 +19,7 @@ from iesolver.lm import call_with_fast_lm
 from iesolver.observability.metrics import instrument
 from iesolver.signatures import AnalyticalEngineSignature
 from iesolver.state import SolverState
+from iesolver.text import fenced
 
 _engine = dspy.ChainOfThought(AnalyticalEngineSignature)
 
@@ -47,8 +48,8 @@ def chain_branch_node(state: SolverState) -> SolverState:
     )
 
     solution_path_log = (
-        f"--- DECOMPOSITION ---\n{result.sub_problem_decomposition}\n\n"
-        f"--- EXPLORATION ---\n{result.perspective_exploration}"
+        f"{fenced('DECOMPOSITION', result.sub_problem_decomposition)}\n\n"
+        f"{fenced('EXPLORATION', result.perspective_exploration)}"
     )
 
     return {

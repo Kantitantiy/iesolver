@@ -32,6 +32,7 @@ from typing import Annotated, Any, Literal, TypedDict
 import pandas as pd
 
 from iesolver.observability.metrics import merge_metrics
+from iesolver.text import fenced
 
 # -----------------------------------------------------------------------------
 # Yardımcı tip takma adları / type aliases
@@ -105,7 +106,7 @@ class DataBundle:
             )
         return self.tables[name]
 
-    def summary(self, max_rows: int = 5, max_cols: int = 20) -> str:
+    def summary(self, max_rows: int = 5, max_cols: int = 20, max_preview_chars: int = 2000) -> str:
         """Produce a token-friendly textual summary for LLM context.
 
         Bu metot eski sistemdeki ``DataProfiler.generate_summary`` ile
@@ -114,12 +115,20 @@ class DataBundle:
         Çıktı doğrudan LLM prompt'una gömülmek üzere tasarlandı, bu
         nedenle sütun sayısı sert üstten sınırlandırılır.
 
+        Guardrail (CLAUDE.md Düzeltme #7): hücre içerikleri kullanıcının
+        yüklediği dosyadan gelir, dolayısıyla güvenilmez. Her tablo bloğu
+        ``fenced(..., untrusted=True)`` ile talimatlardan ayrılır ve önizleme
+        metni ``max_preview_chars`` ile sert şekilde sınırlanır — bir hücreye
+        gömülmüş uzun bir "talimat" metninin prompt'u ele geçirmesi engellenir.
+
         Parameters
         ----------
         max_rows :
             Number of head rows to include per table.
         max_cols :
             Hard cap on columns shown to keep the summary token-bounded.
+        max_preview_chars :
+            Hard cap on the rendered head-row preview per table.
 
         Returns
         -------
@@ -140,6 +149,8 @@ class DataBundle:
             dtypes = {c: str(df[c].dtype) for c in shown}
             missing = {c: int(df[c].isna().sum()) for c in shown}
             head_preview = df.head(max_rows).to_string(index=False)
+            if len(head_preview) > max_preview_chars:
+                head_preview = head_preview[:max_preview_chars] + " …(truncated)"
 
             truncated_note = (
                 f" (showing first {max_cols} of {cols} cols)"
@@ -148,11 +159,14 @@ class DataBundle:
             )
 
             chunks.append(
-                f"\n--- TABLE: {name} ---\n"
-                f"Shape: {rows} rows x {cols} cols{truncated_note}\n"
-                f"dtypes: {dtypes}\n"
-                f"missing: {missing}\n"
-                f"head:\n{head_preview}"
+                fenced(
+                    f"TABLE: {name}",
+                    f"Shape: {rows} rows x {cols} cols{truncated_note}\n"
+                    f"dtypes: {dtypes}\n"
+                    f"missing: {missing}\n"
+                    f"head:\n{head_preview}",
+                    untrusted=True,
+                )
             )
 
         return "\n".join(chunks)
@@ -194,6 +208,10 @@ class SolverState(TypedDict, total=False):
     enable_validator_retry: bool
     # A4: True → call_with_reasoning_lm da fast LM kullanır (reasoning LM kapalı).
     fast_only: bool
+    # A6 (CLAUDE.md Düzeltme #5): True → StrategyRouter kararı 3 örnekleme +
+    # çoğunluk oyu (dspy.majority) ile alınır; en riskli tekil karar olan
+    # execution_path'in tekil-örnekleme varyansını azaltır.
+    self_consistency_router: bool
 
     # ----- Aşama 0 — GateKeeper ---------------------------------------------
     cleaned_prompt: str
@@ -218,6 +236,8 @@ class SolverState(TypedDict, total=False):
     execution_path: ExecutionPath
     reasoning_framework: str
     rationale: str
+    # A6: yalnızca self_consistency_router=True iken doldurulur; ör. "CODE:2/NO_CODE:1".
+    router_vote_summary: str
 
     # ----- Aşama 4A — Analytical (NO_CODE) ----------------------------------
     raw_result: str
@@ -269,6 +289,7 @@ def empty_state(
     enable_refiner: bool = True,
     enable_validator_retry: bool = True,
     fast_only: bool = False,
+    self_consistency_router: bool = False,
 ) -> SolverState:
     """Return a minimal :class:`SolverState` seeded with the user's inputs.
 
@@ -294,6 +315,10 @@ def empty_state(
     fast_only :
         A4 ablation flag. When ``True``, ``call_with_reasoning_lm`` delegates
         to the fast LM, disabling the reasoning model switch.
+    self_consistency_router :
+        A6 ablation flag. When ``True``, the strategy router samples 3
+        completions and takes the majority vote on ``execution_path``
+        instead of a single sample.
 
     Returns
     -------
@@ -306,6 +331,7 @@ def empty_state(
         "enable_refiner": enable_refiner,
         "enable_validator_retry": enable_validator_retry,
         "fast_only": fast_only,
+        "self_consistency_router": self_consistency_router,
     }
     if data_path is not None:
         state["data_path"] = data_path

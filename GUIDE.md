@@ -334,6 +334,29 @@ class RequirementAnalystSignature(dspy.Signature):
 2. `InputField(desc="...")` → LLM'e alan açıklaması
 3. `OutputField(desc="...")` → beklenen format açıklaması
 
+### Prompt yazım kuralları (CLAUDE.md denetimi sonrası, 2026-07-05)
+
+Yeni bir Signature docstring'i yazarken veya düzenlerken şu dört kural geçerli
+— hepsi mevcut 13 Signature'a uygulandı, örnek olarak kullanılabilir:
+
+1. **Pozitif ifade**: "X yapma" değil, "Y koşulunda Z yap" — model olumsuz
+   talimatları görmezden gelmeye daha yatkın. Örnek:
+   `requirement_analyst.py`'daki "DO NOT flag is_complete as False based on
+   row counts" → "Judge completeness by whether the necessary fields are
+   present, independent of row count."
+2. **Grounding**: veri özeti (`data_summary`) alan bir Signature, "yalnızca
+   önizlemede görünen alanlara dayan, eksik alanı uydurma" cümlesini açıkça
+   içermeli (bkz. `algo_selector.py`).
+3. **Delimiter standardı**: node içinde birden fazla serbest metin bloğu tek
+   bir string'te birleştiriliyorsa (`f"{a}\n\n{b}"` gibi), `iesolver.text.fenced(label, content, untrusted=...)` kullanın — kullanıcıdan/dosyadan gelen
+   içerik (`untrusted=True`) modele talimat gibi görünmesin. Örnek:
+   `nodes/requirement.py`'daki `user_clarification` sarmalaması.
+4. **Kısalık**: persona tek cümle, adım listeleri yalnızca gerçekten adımlı
+   bir teknik gerektiğinde (ör. `analytical_engine.py`'deki Least-to-Most
+   decomposition — bu bir "folklor" değil, isimli bir literatür tekniği,
+   kalması doğru). Tekrarlayan talimat satırlarını birleştirin
+   (`final_report.py`'de 3 tekrarlı satır 1 pasaja indirildi).
+
 ### Değişikliği test etme
 
 ```bash
@@ -379,6 +402,7 @@ Bu, makalenin ana araştırma katkısıdır (A5 ablasyonu).
 | A3 | `ie_eval.ablations.make_a3_correctness_fn()` — deterministik doğrulama kapatılır, yalnız LLM validator sinyali kullanılır | — (ie-eval) | Deterministik doğrulama katmanı katkısı |
 | A4 | `solve("...", fast_only=True)` | `--fast-only` | Reasoning LM anahtarlaması katkısı |
 | A5 | `ie_eval.ablations.make_a5_solve(compiled_path)` — MIPROv2 optimize Signature'lar | — (ie-eval) | MIPROv2 optimizasyonunun katkısı |
+| A6 | `solve("...", self_consistency_router=True)` — router 3 örnekleme + `dspy.majority` çoğunluk oyu | `ie_eval.ablations.make_a6_solve()` | Self-consistency'nin `execution_path` kararındaki katkısı (bkz. §11 Bulgu — CLAUDE.md Düzeltme #5) |
 
 > Otoritatif tanımlar: `ie-eval/src/ie_eval/ablations.py` (EVALUATION_PLAN §5 ile hizalı).
 

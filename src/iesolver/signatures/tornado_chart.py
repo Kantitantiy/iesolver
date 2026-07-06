@@ -16,8 +16,8 @@ class TornadoChartSignature(dspy.Signature):
     REQUIREMENTS:
     - Parse the sensitivity_results text to extract parameter names and their impact values.
     - Use matplotlib to draw a horizontal bar chart (tornado layout).
-    - Save the figure to the exact path given in artifact_path (use plt.savefig).
-    - Do NOT call plt.show() — save only.
+    - Save the figure to the exact path given in artifact_path (use plt.savefig); save only,
+      skip interactive display (no plt.show()).
     - Use tight_layout() and dpi=150 for publication quality.
     - If sensitivity_results contains dual/shadow price rows, use those as the impact values.
     - If sensitivity_results contains perturbation rows (±5%, ±10%), use the ±10% values.

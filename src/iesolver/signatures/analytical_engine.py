@@ -9,7 +9,7 @@ class AnalyticalEngineSignature(dspy.Signature):
     """
     You are an Expert Industrial Engineering Strategist.
     Your task is to solve complex qualitative, theoretical, or structural problems
-    WITHOUT writing executable code. You must use a rigorous analytical framework.
+    using rigorous structured analytical reasoning, in place of executable code.
 
     You MUST strictly follow these reasoning steps:
     1. LEAST-TO-MOST DECOMPOSITION: Break the 'essential_prompt' down into 3-5 logical sub-problems.

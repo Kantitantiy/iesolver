@@ -14,12 +14,13 @@ Ablasyon konfigürasyonları:
 | A3 | llm_validator_only| correctness_fn        | Deterministik doğrulama katmanı katkısı   |
 | A4 | fast_only         | fast_only=True        | Reasoning LM anahtarlaması katkısı        |
 | A5 | optimized_sigs    | compiled DSPy program | MIPROv2 optimizasyonunun katkısı          |
+| A6 | self_consistency  | self_consistency_router=True | Router'da self-consistency katkısı |
 
 Kullanım örneği::
 
     from ie_eval.ablations import (
         make_a1_solve, make_a2_solve, make_a3_correctness_fn,
-        make_a4_solve, make_a5_solve,
+        make_a4_solve, make_a5_solve, make_a6_solve,
     )
     from ie_eval.runner import run_dataset
 
@@ -197,10 +198,39 @@ def make_a5_solve(compiled_path: Path, **default_kw: Any) -> Callable:
     return _solve_fn
 
 
+
+# ---------------------------------------------------------------------------
+# A6 — Self-consistency router (3-oy çoğunluk)
+# ---------------------------------------------------------------------------
+def make_a6_solve(**default_kw: Any) -> Callable:
+    """Return a solve_fn with self-consistency enabled on the strategy router (A6 ablation).
+
+    execution_path kararı 3 bağımsız örneklemenin çoğunluk oyuyla alınır
+    (``dspy.majority``), tek örnekleme yerine. Pipeline'daki en yüksek
+    blast-radius'lu kararın (yanlış dallanma her şeyi geçersiz kılar)
+    varyansını izole eder — 3x router maliyeti karşılığında.
+
+    Parameters
+    ----------
+    **default_kw :
+        ``auto_mode`` vb. kalıcı parametreler.
+    """
+    from iesolver import solve as _solve
+
+    def _solve_fn(prompt: str, data_path: Any = None, **kw: Any) -> dict:
+        merged = {**default_kw, **kw}
+        merged.setdefault("auto_mode", True)
+        return _solve(prompt, data_path=data_path, self_consistency_router=True, **merged)
+
+    _solve_fn.__name__ = "a6_self_consistency_solve"
+    return _solve_fn
+
+
 __all__ = [
     "make_a1_solve",
     "make_a2_solve",
     "make_a3_correctness_fn",
     "make_a4_solve",
     "make_a5_solve",
+    "make_a6_solve",
 ]

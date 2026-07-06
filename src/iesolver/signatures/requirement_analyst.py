@@ -12,12 +12,12 @@ Analyze the cleaned prompt and the provided data summary.
 Apply the G-O-C (Goal, Output, Constraint) framework to extract exact specifications.
 
 CRITICAL CONTEXT ON DATA SUMMARY:
-The provided data summary is ONLY a schema preview (e.g., a sample of the first 5 rows) designed to demonstrate the data structure. It is NOT the complete dataset.
-- DO NOT flag 'is_complete' as False based on row counts (e.g., seeing only 5 rows when the prompt requires 15 locations).
-- Assume the full dataset contains the required number of records AS LONG AS the necessary data fields (columns) exist in the preview.
+The provided data summary is only a schema preview (e.g., the first 5 rows) that demonstrates the data structure — treat the full dataset as containing every record the prompt describes.
+- Judge completeness by whether the necessary data fields (columns) are present in the preview, independent of how many preview rows are shown.
+- Set 'is_complete' to True whenever the required fields exist in the preview, even if the prompt implies a larger row count than the preview shows.
 
 CRITICAL INSTRUCTION:
-If essential structural information required to define a solvable mathematical or logical model is missing (e.g., objective function direction, specific capacity constraints, or required data fields/columns are entirely absent from the schema preview), you must set 'is_complete' to False and list the exact questions needed to proceed.
+Set 'is_complete' to False, and list the exact questions needed to proceed, only when essential structural information for a solvable model is missing — e.g., the objective function direction, a specific capacity constraint, or a required data field is entirely absent from the schema preview.
     """
     # G-O-C framework'ünü DSPy'a burada öğretiyoruz. DSPy 3.x tipli output'ları
     # sayesinde is_complete artık native bool; missing_items ve constraints

@@ -44,6 +44,7 @@ def solve(
     enable_refiner: bool = True,
     enable_validator_retry: bool = True,
     fast_only: bool = False,
+    self_consistency_router: bool = False,
 ) -> SolverState:
     """Run the iesolver workflow end-to-end.
 
@@ -76,6 +77,11 @@ def solve(
     fast_only :
         **A4 ablation**. When ``True``, all LLM calls — including those
         normally routed to the heavier reasoning model — use the fast LM.
+    self_consistency_router :
+        **A6 ablation**. When ``True``, the CODE/NO_CODE routing decision is
+        sampled 3 times and resolved by majority vote instead of a single
+        completion, trading 3x router cost for lower variance on the single
+        highest-blast-radius decision in the pipeline.
 
     Returns
     -------
@@ -99,6 +105,7 @@ def solve(
         enable_refiner=enable_refiner,
         enable_validator_retry=enable_validator_retry,
         fast_only=fast_only,
+        self_consistency_router=self_consistency_router,
     )
 
     config: dict[str, Any] = {
@@ -121,6 +128,7 @@ def stream_solve(
     enable_refiner: bool = True,
     enable_validator_retry: bool = True,
     fast_only: bool = False,
+    self_consistency_router: bool = False,
 ) -> Generator[tuple[str, dict[str, Any]], None, None]:
     """Like solve(), but yields (node_name, partial_state) after each node completes.
 
@@ -151,6 +159,7 @@ def stream_solve(
         enable_refiner=enable_refiner,
         enable_validator_retry=enable_validator_retry,
         fast_only=fast_only,
+        self_consistency_router=self_consistency_router,
     )
     config: dict[str, Any] = {
         "configurable": {"thread_id": thread_id or str(uuid4())}

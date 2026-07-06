@@ -14,6 +14,11 @@ class AlgoSelectorSignature(dspy.Signature):
     You MUST also identify any potential conflicts between the user's constraints
     and the chosen library's technical limitations (e.g., 'scikit-learn KMeans only
     supports Euclidean distance, but user asked for Manhattan').
+
+    GROUNDING: base every reference to columns, fields, or record counts strictly on
+    what literally appears in the data summary. If a field the problem seems to need
+    is absent from the summary, name that gap explicitly in adaptation_notes instead
+    of assuming the field exists.
     """
 
     essential_prompt = dspy.InputField(desc="The core problem instruction.")

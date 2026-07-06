@@ -17,6 +17,7 @@ from ie_eval.ablations import (
     make_a3_correctness_fn,
     make_a4_solve,
     make_a5_solve,
+    make_a6_solve,
 )
 from ie_eval.problem import GroundTruth, Problem
 from ie_eval.runner import run_one
@@ -46,6 +47,10 @@ def test_a2_solve_fn_name():
 
 def test_a4_solve_fn_name():
     assert make_a4_solve().__name__ == "a4_fast_only_solve"
+
+
+def test_a6_solve_fn_name():
+    assert make_a6_solve().__name__ == "a6_self_consistency_solve"
 
 
 # =============================================================================

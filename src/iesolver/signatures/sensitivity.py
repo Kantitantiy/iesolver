@@ -26,7 +26,7 @@ class SensitivityCodeSignature(dspy.Signature):
     OUTPUT FORMAT (must be parseable as a table):
     Print results with clear labels so downstream code can parse them.
     Include the original objective value as a reference row.
-    Do NOT generate plots — text output only.
+    Produce text output only (printed tables) — no plots.
     """
     # DESIGN_REVIEW §3.6: dual'lar önce; perturbasyon sadece fallback.
 

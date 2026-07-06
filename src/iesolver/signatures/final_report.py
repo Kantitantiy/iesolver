@@ -28,10 +28,10 @@ class FinalReportSignature(dspy.Signature):
        - Provide step-by-step, actionable implementation orders.
        - Use imperative mood (command form).
        - Specify which department/unit is responsible for each action.
-       - CRITICAL RULE: DO NOT use code variable names or generic placeholders (e.g., never write `route_sequence` or `assigned_nodes`).
-       - You MUST extract and explicitly state the actual numerical data from the validated_results (e.g., write "Assign nodes 0, 4, 6, 8, 12, and 13 to Cluster 0" or "Follow the exact route path: 999 -> 13 -> 12...").
-       - In the report, present the content of the variables in a way that people can understand (Do not use them as variable names).
-       - In the report, use the variables not as variables themselves, but in a way that people can understand and how to use the content of these variables.
+       - CRITICAL RULE: Always write out the actual values from validated_results in plain
+         language, in place of code variable names or generic placeholders — e.g., write
+         "Assign nodes 0, 4, 6, 8, 12, and 13 to Cluster 0" rather than `assigned_nodes`, and
+         "Follow the exact route path: 999 -> 13 -> 12..." rather than `route_sequence`.
     """
 
     original_goal = dspy.InputField(desc="The initial business or engineering objective.")

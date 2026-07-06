@@ -28,6 +28,7 @@ from iesolver.lm import call_with_fast_lm
 from iesolver.observability.metrics import instrument
 from iesolver.signatures import RequirementAnalystSignature
 from iesolver.state import SolverState
+from iesolver.text import fenced
 
 _analyst = dspy.Predict(RequirementAnalystSignature)
 
@@ -49,7 +50,10 @@ def requirement_node(state: SolverState) -> SolverState:
     clarification = state.get("user_clarification", "") or ""
 
     if clarification:
-        effective_prompt = f"{cleaned}\n\n[USER CLARIFICATION]: {clarification}"
+        # Delimiter standardı (CLAUDE.md Düzeltme #1): kullanıcı cevabı
+        # (interactive mod'da doğrudan kullanıcıdan gelir) fenced() ile
+        # ayrılır, aksi halde içindeki bir cümle talimat gibi okunabilir.
+        effective_prompt = f"{cleaned}\n\n{fenced('USER_CLARIFICATION', clarification, untrusted=True)}"
     else:
         effective_prompt = cleaned
 

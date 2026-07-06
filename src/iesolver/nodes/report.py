@@ -25,6 +25,7 @@ from iesolver.lm import call_with_fast_lm
 from iesolver.observability.metrics import instrument
 from iesolver.signatures import FinalReportSignature
 from iesolver.state import SolverState
+from iesolver.text import fenced
 
 _reporter = dspy.ChainOfThought(FinalReportSignature)
 
@@ -36,9 +37,9 @@ def _build_solution_context(state: SolverState) -> str:
     final_code = state.get("final_code", "") or ""
 
     if final_code:
-        chunks.append(f"--- EXECUTED PYTHON CODE ---\n{final_code}")
+        chunks.append(fenced("EXECUTED_PYTHON_CODE", final_code))
     if solution_path:
-        chunks.append(f"--- ANALYTICAL SOLUTION PATH ---\n{solution_path}")
+        chunks.append(fenced("ANALYTICAL_SOLUTION_PATH", solution_path))
 
     return "\n\n".join(chunks) if chunks else "N/A"
 
@@ -52,13 +53,14 @@ def _build_validated_results(state: SolverState) -> str:
     """
     path = state.get("execution_path", "")
     if path == "CODE":
-        return (
-            "--- RAW EXECUTION RESULTS ---\n"
-            f"{state.get('execution_result', '(missing)')}\n\n"
-            "--- VALIDATION QA NOTES ---\n"
+        qa_notes = (
             f"Valid: {state.get('is_valid', 'N/A')}\n"
             f"Confidence Score: {state.get('confidence_score', 0)}/100\n"
             f"Notes: {state.get('validation_notes', '(none)')}"
+        )
+        return (
+            f"{fenced('RAW_EXECUTION_RESULTS', state.get('execution_result', '(missing)'))}\n\n"
+            f"{fenced('VALIDATION_QA_NOTES', qa_notes)}"
         )
 
     return state.get("raw_result", "(no result available)") or "(no result)"

@@ -69,6 +69,7 @@ Raporlama: **pass@1, 3 bağımsız koşunun ortalaması ± std**. API'ler temper
 | A3 | Deterministik validation yok (yalnız LLM validator) | İkili doğrulama katmanı argümanı |
 | A4 | Fast-only (reasoning LM anahtarlaması kapalı) | Model anahtarlama gerekçesi |
 | A5 | MIPROv2 ile optimize edilmiş Signature'lar vs ham | "Neden DSPy?" sorusunun cevabı |
+| A6 | StrategyRouter'da self-consistency (3-örnekleme + çoğunluk oyu) vs tek örnekleme | En yüksek blast-radius'lu tekil kararın (execution_path) varyansı; 3x router maliyeti karşılığında doğruluk kazancı var mı |
 
 Ablasyonlar yalnızca **bir benchmark** (NL4Opt temiz test) + **tek model** üzerinde koşulur — kombinatorik patlamayı önler.
 
